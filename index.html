@@ -1739,16 +1739,32 @@ const StateManager = {
     },
 
     addSelectedFile(file) {
-    // 使用文件的唯一标识符作为键
-    const fileKey = `${file.type}-${file.name}-${file.path || ''}`;
-    this.selectedFiles.add(file);
-    this.updateSelectedCount();
+    // 使用文件的路径作为唯一标识符
+    const fileKey = file.path || `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${file.name}`;
+    
+    // 检查是否已存在
+    let exists = false;
+    for (let selectedFile of this.selectedFiles) {
+        const selectedKey = selectedFile.path || `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${selectedFile.name}`;
+        if (selectedKey === fileKey) {
+            exists = true;
+            break;
+        }
+    }
+    
+    if (!exists) {
+        this.selectedFiles.add(file);
+        this.updateSelectedCount();
+    }
 },
 
 removeSelectedFile(file) {
     // 找到并删除对应的文件
+    const fileKey = file.path || `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${file.name}`;
+    
     for (let selectedFile of this.selectedFiles) {
-        if (selectedFile.name === file.name && selectedFile.type === file.type) {
+        const selectedKey = selectedFile.path || `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${selectedFile.name}`;
+        if (selectedKey === fileKey) {
             this.selectedFiles.delete(selectedFile);
             break;
         }
@@ -2424,32 +2440,33 @@ const FileManager = {
     },
 
     // 创建文件项
-    createFileItem(item) {
-        const fileItem = document.createElement('div');
-        fileItem.className = 'file-item p-4 flex items-center';
-        fileItem.dataset.name = item.name;
-        fileItem.dataset.type = item.type;
+createFileItem(item) {
+    const fileItem = document.createElement('div');
+    fileItem.className = 'file-item p-4 flex items-center';
+    fileItem.dataset.name = item.name;
+    fileItem.dataset.type = item.type;
+    fileItem.dataset.path = item.path || ''; // 添加路径信息
 
-        // 添加右键菜单
-        fileItem.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            ContextMenuManager.show(e, item);
-        });
+    // 添加右键菜单
+    fileItem.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        ContextMenuManager.show(e, item);
+    });
 
-        // 点击事件
-        fileItem.addEventListener('click', (e) => {
-            this.handleFileClick(e, item);
-        });
+    // 点击事件
+    fileItem.addEventListener('click', (e) => {
+        this.handleFileClick(e, item);
+    });
 
-        // 创建文件内容
-        const icon = this.createFileIcon(item);
-        const infoContainer = this.createFileInfo(item);
+    // 创建文件内容
+    const icon = this.createFileIcon(item);
+    const infoContainer = this.createFileInfo(item);
 
-        fileItem.appendChild(icon);
-        fileItem.appendChild(infoContainer);
+    fileItem.appendChild(icon);
+    fileItem.appendChild(infoContainer);
 
-        return fileItem;
-    },
+    return fileItem;
+},
 
     // 创建文件图标
     createFileIcon(item) {
@@ -3406,127 +3423,197 @@ const SelectionManager = {
         return selectBtn && selectBtn.innerHTML.includes('fa-times');
     },
 
-    // 处理文件选择 - 新增方法
-    handleFileSelection(fileItem, fileInfo) {
-        if (!this.isInSelectMode()) {
-            return false; // 不在选择模式，不处理选择
-        }
+    // 处理文件选择
+handleFileSelection(fileItem, fileInfo) {
+    if (!this.isInSelectMode()) {
+        return false; // 不在选择模式，不处理选择
+    }
 
-        if (fileItem.classList.contains('selected')) {
-            fileItem.classList.remove('selected');
-            StateManager.removeSelectedFile(fileInfo);
-        } else {
-            fileItem.classList.add('selected');
-            StateManager.addSelectedFile(fileInfo);
-        }
-
-        // 更新选中数量显示
-        this.updateSelectionCount();
-
-        // 如果没有选中文件，退出选择模式
-        if (StateManager.selectedFiles.size === 0) {
-            this.exitSelectMode();
-        }
-
-        return true; // 已处理选择
-    },
+    if (fileItem.classList.contains('selected')) {
+        fileItem.classList.remove('selected');
+        StateManager.removeSelectedFile(fileInfo);
+    } else {
+        fileItem.classList.add('selected');
+        StateManager.addSelectedFile(fileInfo);
+    }
 
     // 更新选中数量显示
-    updateSelectionCount() {
-        const selectedCount = document.getElementById('selected-count');
-        if (selectedCount) {
-            selectedCount.textContent = StateManager.selectedFiles.size;
-        }
-    },
+    this.updateSelectionCount();
+
+    // 如果没有选中文件，退出选择模式
+    if (StateManager.selectedFiles.size === 0) {
+        this.exitSelectMode();
+    }
+
+    return true; // 已处理选择
+},
+
+// 更新选中数量显示
+updateSelectionCount() {
+    const selectedCount = document.getElementById('selected-count');
+    if (selectedCount) {
+        selectedCount.textContent = StateManager.selectedFiles.size;
+    }
+},
+
+// 进入选择模式
+enterSelectMode() {
+    const selectBtn = DOMManager.elements.selectBtn;
+    if (selectBtn) {
+        selectBtn.innerHTML = '<i class="fas fa-times text-red-500"></i>';
+        selectBtn.title = '取消选择';
+    }
+    
+    // 添加选择模式样式提示
+    document.querySelectorAll('.file-item').forEach(item => {
+        item.style.cursor = 'pointer';
+    });
+    
+    DOMManager.showBatchToolbar();
+    StateManager.clearSelectedFiles();
+},
+
+// 退出选择模式
+exitSelectMode() {
+    StateManager.clearSelectedFiles();
+    DOMManager.hideBatchToolbar();
+    
+    // 移除所有选中状态
+    document.querySelectorAll('.file-item.selected').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
+    const selectBtn = DOMManager.elements.selectBtn;
+    if (selectBtn) {
+        selectBtn.innerHTML = '<i class="fas fa-check-square text-blue-500"></i>';
+        selectBtn.title = '选择文件';
+    }
+    
+    // 恢复默认样式
+    document.querySelectorAll('.file-item').forEach(item => {
+        item.style.cursor = '';
+    });
+},
+
+// 切换选择模式
+toggleSelectMode() {
+    if (StateManager.selectedFiles.size > 0 || this.isInSelectMode()) {
+        this.exitSelectMode();
+    } else {
+        this.enterSelectMode();
+    }
+},
+
+// 检查是否在选择模式
+isInSelectMode() {
+    const selectBtn = DOMManager.elements.selectBtn;
+    return selectBtn && selectBtn.innerHTML.includes('fa-times');
+},
 
     // 下载选中的文件
     async downloadSelectedFiles() {
-        if (StateManager.selectedFiles.size === 0) {
-            ToastManager.show('请先选择文件');
-            return;
-        }
+    if (StateManager.selectedFiles.size === 0) {
+        ToastManager.show('请先选择文件');
+        return;
+    }
 
-        // 单个文件直接下载
-        if (StateManager.selectedFiles.size === 1) {
-            const file = StateManager.selectedFiles.values().next().value;
-            await FileManager.downloadFile(file);
-            this.exitSelectMode();
-            return;
-        }
+    // 单个文件直接下载
+    if (StateManager.selectedFiles.size === 1) {
+        const file = Array.from(StateManager.selectedFiles)[0];
+        await FileManager.downloadFile(file);
+        this.exitSelectMode();
+        return;
+    }
 
-        // 多个文件打包下载
-        try {
-            ToastManager.show(`开始打包 ${StateManager.selectedFiles.size} 个文件...`);
-            const zip = new JSZip();
-            let count = 0;
-            let errors = 0;
+    // 多个文件打包下载
+    try {
+        ToastManager.show(`开始打包 ${StateManager.selectedFiles.size} 个文件...`);
+        const zip = new JSZip();
+        let count = 0;
+        let errors = 0;
 
-            // 创建进度提示
-            const progressToast = ToastManager.createProgressToast(`打包中: 0/${StateManager.selectedFiles.size} 个文件`);
+        // 创建进度提示
+        const progressToast = ToastManager.createProgressToast(`打包中: 0/${StateManager.selectedFiles.size} 个文件`);
 
-            // 下载所有选中的文件
-            const downloadPromises = Array.from(StateManager.selectedFiles).map(async file => {
-                if (file.type !== 'file' || !file.download_url) return;
-                
-                try {
-                    const response = await fetch(file.download_url);
-                    
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    
-                    const blob = await response.blob();
-                    zip.file(file.name, blob);
-                    count++;
-                    progressToast.textContent = `打包中: ${count}/${StateManager.selectedFiles.size} 个文件 (${errors} 失败)`;
-                } catch (error) {
-                    console.error(`下载 ${file.name} 失败:`, error);
-                    errors++;
-                    progressToast.textContent = `打包中: ${count}/${StateManager.selectedFiles.size} 个文件 (${errors} 失败)`;
-                }
-            });
-
-            // 等待所有下载完成
-            await Promise.all(downloadPromises);
-            
-            if (count === 0) {
-                ToastManager.show('没有文件可以下载');
+        // 下载所有选中的文件
+        const downloadPromises = Array.from(StateManager.selectedFiles).map(async file => {
+            if (file.type !== 'file' || !file.download_url) {
+                errors++;
                 return;
             }
             
-            // 生成ZIP文件
-            const repoName = StateManager.currentRepo.split('/')[1] || 'download';
-            const dateString = new Date().toISOString().slice(0,10);
-            const zipFilename = `${repoName}-selected-files-${dateString}.zip`;
-            
-            const content = await zip.generateAsync({ type: 'blob' });
-            
-            // 创建下载链接
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(content);
-            link.download = zipFilename;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            
-            // 清理
-            setTimeout(() => {
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-            }, 100);
-            
-            ToastManager.removeProgressToast();
-            
-            if (errors === 0) {
-                ToastManager.show(`已成功打包下载 ${count} 个文件`);
-            } else {
-                ToastManager.show(`打包完成: ${count} 成功, ${errors} 失败`);
+            try {
+                const response = await fetch(file.download_url);
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const blob = await response.blob();
+                
+                // 构建文件路径，保持目录结构
+                let filePath = file.name;
+                if (file.path && file.path.includes('/')) {
+                    // 如果文件有路径信息，保持路径结构
+                    const pathParts = file.path.split('/');
+                    pathParts.pop(); // 移除文件名
+                    if (pathParts.length > 0) {
+                        filePath = pathParts.join('/') + '/' + file.name;
+                    }
+                }
+                
+                zip.file(filePath, blob);
+                count++;
+                progressToast.textContent = `打包中: ${count}/${StateManager.selectedFiles.size} 个文件 (${errors} 失败)`;
+            } catch (error) {
+                console.error(`下载 ${file.name} 失败:`, error);
+                errors++;
+                progressToast.textContent = `打包中: ${count}/${StateManager.selectedFiles.size} 个文件 (${errors} 失败)`;
             }
-        } catch (error) {
-            console.error('打包下载失败:', error);
-            ToastManager.show('打包下载失败: ' + error.message);
-        } finally {
-            this.exitSelectMode();
+        });
+
+        // 等待所有下载完成
+        await Promise.all(downloadPromises);
+        
+        if (count === 0) {
+            ToastManager.show('没有文件可以下载');
+            return;
         }
-    },
+        
+        // 生成ZIP文件
+        const repoName = StateManager.currentRepo.split('/')[1] || 'download';
+        const dateString = new Date().toISOString().slice(0,10);
+        const zipFilename = `${repoName}-selected-files-${dateString}.zip`;
+        
+        const content = await zip.generateAsync({ type: 'blob' });
+        
+        // 创建下载链接
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(content);
+        link.download = zipFilename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        
+        // 清理
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }, 100);
+        
+        ToastManager.removeProgressToast();
+        
+        if (errors === 0) {
+            ToastManager.show(`已成功打包下载 ${count} 个文件`);
+        } else {
+            ToastManager.show(`打包完成: ${count} 成功, ${errors} 失败`);
+        }
+    } catch (error) {
+        console.error('打包下载失败:', error);
+        ToastManager.show('打包下载失败: ' + error.message);
+    } finally {
+        this.exitSelectMode();
+    }
+},
+
 
     // 删除选中的文件
     async deleteSelectedFiles() {
