@@ -13,7 +13,6 @@
     <script src="https://cdn.tailwindcss.com/3.3.3"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <link rel="icon" href="https://hub.gitmirror.com/https://raw.githubusercontent.com/qq5855144/img/HEAD/2.svg" type="image/x-icon">
     <style>
         /* 基础样式 */
         :root {
@@ -2004,27 +2003,27 @@ const APIService = {
     graphqlURL: 'https://api.github.com/graphql',
 
     // 通用请求方法
-    async request(url, options = {}) {
-        const token = StateManager.githubToken;
-        if (!token) throw new Error('未找到认证令牌');
+async request(url, options = {}) {
+    const token = StateManager.githubToken;
+    if (!token) throw new Error('未找到认证令牌');
 
-        const defaultOptions = {
-            headers: {
-                'Authorization': `token ${token}`,
-                'Accept': 'application/vnd.github.v3+json',
-                ...options.headers
-            }
-        };
-
-        const response = await fetch(url, { ...defaultOptions, ...options });
-        
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `请求失败: ${response.status}`);
+    const defaultOptions = {
+        headers: {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            ...options.headers
         }
+    };
 
-        return response;
-    },
+    const response = await fetch(url, { ...defaultOptions, ...options });
+    
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `请求失败: ${response.status}`);
+    }
+
+    return response;
+},
 
    // GraphQL 请求
     async graphql(query) {
@@ -2289,23 +2288,20 @@ decodeBase64Content(base64) {
         return response.json();
     },
 
-    // 创建仓库
-    async createRepository(name, description, isPrivate) {
-        const response = await this.request(`${this.baseURL}/user/repos`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name,
-                description,
-                private: isPrivate,
-                auto_init: true
-            })
-        });
+    // 创建仓库 - 修复版本
+async createRepository(name, description, isPrivate) {
+    const response = await this.request(`${this.baseURL}/user/repos`, {
+        method: 'POST',
+        body: JSON.stringify({
+            name,
+            description: description || '',
+            private: !!isPrivate,
+            auto_init: true
+        })
+    });
 
-        return response.json();
-    },
+    return response.json();
+},
 
     // 删除仓库
     async deleteRepository(owner, repo) {
@@ -5243,32 +5239,67 @@ async createFolder(folderName) {
     }
 },
 
-    // 处理新建仓库
-    async handleNewRepoCreate() {
-        const repoName = DOMManager.elements.newRepoName.value.trim();
-        if (repoName) {
-            await this.createRepository(
-                repoName, 
-                DOMManager.elements.newRepoDesc.value.trim(), 
-                DOMManager.elements.newRepoPrivate.checked
-            );
-            DialogManager.hideNewRepoDialog();
-        } else {
-            ToastManager.show('请输入仓库名称');
-        }
-    },
+// 创建仓库方法 - 简化版本
+createRepository: async function(name, description, isPrivate) {
+    try {
+        ToastManager.show('正在创建仓库...');
 
-    // 创建仓库
-    async createRepository(name, description, isPrivate) {
-        try {
-            await APIService.createRepository(name, description, isPrivate);
-            ToastManager.show('仓库创建成功');
-            NavigationManager.loadRepositories();
-        } catch (error) {
-            console.error('创建仓库错误:', error);
-            ToastManager.show('创建仓库失败: ' + error.message);
-        }
-    },
+        // 使用 APIService 创建仓库
+        const result = await APIService.createRepository(name, description, isPrivate);
+        
+        ToastManager.show(`仓库 "${name}" 创建成功`);
+        
+        // 刷新仓库列表
+        NavigationManager.loadRepositories();
+        
+        return result;
+    } catch (error) {
+        console.error('创建仓库错误:', error);
+        ToastManager.show('创建仓库失败: ' + error.message);
+        throw error;
+    }
+},
+
+    // 处理新建仓库 - 修复版本
+async handleNewRepoCreate() {
+    const repoName = DOMManager.elements.newRepoName.value.trim();
+    const repoDesc = DOMManager.elements.newRepoDesc.value.trim();
+    const isPrivate = DOMManager.elements.newRepoPrivate.checked;
+    
+    if (!repoName) {
+        ToastManager.show('请输入仓库名称');
+        DOMManager.elements.newRepoName.focus();
+        return;
+    }
+
+    // 验证仓库名称格式
+    if (!/^[a-zA-Z0-9_.-]+$/.test(repoName)) {
+        ToastManager.show('仓库名称只能包含字母、数字、下划线、点号和连字符');
+        DOMManager.elements.newRepoName.focus();
+        return;
+    }
+
+    try {
+        // 显示创建中状态
+        const createBtn = DOMManager.elements.newRepoCreate;
+        const originalText = createBtn.innerHTML;
+        createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 创建中...';
+        createBtn.disabled = true;
+
+        // 调用 createRepository 方法
+        await this.createRepository(repoName, repoDesc, isPrivate);
+        DialogManager.hideNewRepoDialog();
+        
+    } catch (error) {
+        console.error('处理新建仓库错误:', error);
+        // 错误已经在 createRepository 中处理，这里不需要重复处理
+    } finally {
+        // 恢复按钮状态
+        const createBtn = DOMManager.elements.newRepoCreate;
+        createBtn.innerHTML = '创建';
+        createBtn.disabled = false;
+    }
+},
 
     // 处理文件上传 - 添加文件大小限制
 async handleFileUpload() {
