@@ -1147,9 +1147,6 @@
         <!-- 页脚 -->
 <footer class="app-footer">
     <div class="max-w-6xl mx-auto flex justify-center gap-3">        
-        <button id="refresh-btn" class="glass-btn p-3" title="刷新">
-            <i class="fas fa-sync-alt text-emerald-500"></i>
-        </button>
         <button id="new-repo-btn" class="glass-btn p-3" title="新建仓库">
             <i class="fas fa-plus text-blue-500"></i>
         </button>
@@ -1164,9 +1161,6 @@
         </button>
         <button id="select-btn" class="glass-btn p-3 hidden" title="选择文件">
             <i class="fas fa-check-square text-blue-500"></i>
-        </button>
-        <button id="static-site-btn" class="glass-btn p-3 hidden" title="启用静态网站">
-            <i class="fas fa-globe text-green-500"></i>
         </button>
     </div>
 </footer>
@@ -1300,61 +1294,71 @@
     </div>
     
     <!-- 上下文菜单 -->
-    <div id="context-menu" class="context-menu">
-        <div id="context-open" class="context-menu-item">
-            <i class="fas fa-folder-open"></i>
-            <span>打开</span>
-        </div>
-      <div class="context-menu-divider"></div>  
-        
-        <div id="context-download" class="context-menu-item">
-            <i class="fas fa-download"></i>
-            <span>下载</span>
-        </div>
-              
-        <div id="context-rename" class="context-menu-item">
-            <i class="fas fa-edit"></i>
-            <span>重命名</span>
-        </div>
-                
-        <div id="context-copy-link" class="context-menu-item">
-            <i class="fas fa-link"></i>
-            <span>复制链接</span>
-        </div>
-                
-        <div id="context-copy-proxy-link" class="context-menu-item">
-            <i class="fas fa-share-alt"></i>
-            <span>复制代理链接</span>
-        </div>
-                
-        <!-- 仓库级菜单 -->
-        <div id="context-download-source" class="context-menu-item">
-            <i class="fas fa-download text-blue-500"></i>
-            <span class="text-blue-500">下载源码</span>
-        </div>
-                
-        <!-- 触发工作流 -->       
-        <div id="context-build-app" class="context-menu-item context-build-app">
-            <i class="fas fa-hammer"></i>
-            <span>运行工作流</span>
-        </div>                                  
-        <!-- 添加静态网站选项 -->        
-        <div id="context-enable-pages" class="context-menu-item">
-            <i class="fas fa-globe text-green-500"></i>
-            <span class="text-green-500">启用静态网站</span>
-        </div>
-            
-         <div class="context-menu-divider"></div>       
-        <div id="context-delete" class="context-menu-item">
-            <i class="fas fa-trash text-red-500"></i>
-            <span class="text-red-500">删除</span>
-        </div>
+<div id="context-menu" class="context-menu">
+    <div id="context-open" class="context-menu-item">
+        <i class="fas fa-folder-open"></i>
+        <span>打开</span>
+    </div>
+    <div class="context-menu-divider"></div>  
+    
+    <div id="context-copy-repo-link" class="context-menu-item">
+        <i class="fas fa-link"></i>
+        <span>复制仓库链接</span>
+    </div>
+   
+    <div id="context-copy-site-link" class="context-menu-item hidden">
+        <i class="fas fa-globe"></i>
+        <span>复制网站链接</span>
     </div>
     
-    <!-- 添加静态网站配置对话框 -->
+    <div id="context-download" class="context-menu-item">
+        <i class="fas fa-download"></i>
+        <span>下载</span>
+    </div>
+          
+    <div id="context-rename" class="context-menu-item">
+        <i class="fas fa-edit"></i>
+        <span>重命名</span>
+    </div>
+            
+    <div id="context-copy-link" class="context-menu-item">
+        <i class="fas fa-link"></i>
+        <span>复制链接</span>
+    </div>
+            
+    <div id="context-copy-proxy-link" class="context-menu-item">
+        <i class="fas fa-share-alt"></i>
+        <span>复制代理链接</span>
+    </div>
+            
+    <!-- 仓库级菜单 -->
+    <div id="context-download-source" class="context-menu-item">
+        <i class="fas fa-download text-blue-500"></i>
+        <span class="text-blue-500">下载源码</span>
+    </div>
+            
+    <!-- 触发工作流 -->       
+    <div id="context-build-app" class="context-menu-item context-build-app">
+        <i class="fas fa-hammer"></i>
+        <span>运行工作流</span>
+    </div>                                  
+    <!-- 添加部署网站选项 -->        
+    <div id="context-enable-pages" class="context-menu-item">
+        <i class="fas fa-globe text-green-500"></i>
+        <span class="text-green-500">部署网站</span>
+    </div>
+        
+     <div class="context-menu-divider"></div>       
+    <div id="context-delete" class="context-menu-item">
+        <i class="fas fa-trash text-red-500"></i>
+        <span class="text-red-500">删除</span>
+    </div>
+</div>
+    
+    <!-- 添加部署网站配置对话框 -->
     <div id="static-site-dialog" class="fixed inset-0 z-50 dialog-overlay flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
         <div id="static-site-content" class="dialog-content p-6 rounded-xl w-full max-w-md transform scale-90 transition-transform duration-300">
-            <h3 id="static-site-title" class="text-xl font-bold mb-4">静态网站配置</h3>
+            <h3 id="static-site-title" class="text-xl font-bold mb-4">部署网站配置</h3>
             
             <div class="mb-4">
                 <label class="block text-gray-700 mb-2 font-medium">分支</label>
@@ -1887,7 +1891,7 @@ const DOMManager = {
             uploadFile: document.getElementById('upload-file'),
             uploadCancel: document.getElementById('upload-cancel'),
 
-            // 静态网站对话框
+            // 部署网站对话框
             staticSiteDialog: document.getElementById('static-site-dialog'),
             pagesBranch: document.getElementById('pages-branch'),
             pagesFolder: document.getElementById('pages-folder'),
@@ -1896,17 +1900,19 @@ const DOMManager = {
             staticSiteEnable: document.getElementById('static-site-enable'),
             staticSiteCancel: document.getElementById('static-site-cancel'),
 
-            // 上下文菜单
-            contextMenu: document.getElementById('context-menu'),
-            contextOpen: document.getElementById('context-open'),
-            contextDownload: document.getElementById('context-download'),
-            contextRename: document.getElementById('context-rename'),
-            contextCopyLink: document.getElementById('context-copy-link'),
-            contextCopyProxyLink: document.getElementById('context-copy-proxy-link'),
-            contextDelete: document.getElementById('context-delete'),
-            contextEnablePages: document.getElementById('context-enable-pages'),
-            contextBuildApp: document.getElementById('context-build-app'),
-            contextDownloadSource: document.getElementById('context-download-source'),
+           // 上下文菜单
+contextMenu: document.getElementById('context-menu'),
+contextOpen: document.getElementById('context-open'),
+contextDownload: document.getElementById('context-download'),
+contextRename: document.getElementById('context-rename'),
+contextCopyLink: document.getElementById('context-copy-link'),
+contextCopyProxyLink: document.getElementById('context-copy-proxy-link'),
+contextDelete: document.getElementById('context-delete'),
+contextEnablePages: document.getElementById('context-enable-pages'),
+contextBuildApp: document.getElementById('context-build-app'),
+contextDownloadSource: document.getElementById('context-download-source'),
+contextCopyRepoLink: document.getElementById('context-copy-repo-link'),
+contextCopySiteLink: document.getElementById('context-copy-site-link'),
 
             // 提示和状态
             toast: document.getElementById('toast'),
@@ -2098,36 +2104,61 @@ async enableGitHubPages(owner, repo, branch, path) {
         return response.json();
     },
 
-    // 获取仓库列表
-    async getRepositories() {
-        const query = `
-            query {
-                viewer {
-                    repositories(first: 100, ownerAffiliations: [OWNER], orderBy: {field: NAME, direction: ASC}) {
-                        nodes {
-                            name
-                            owner {
-                                login
-                            }
-                            isPrivate
-                            description
-                            updatedAt
+    // 获取仓库列表 - 修复版本
+async getRepositories() {
+    const query = `
+        query {
+            viewer {
+                repositories(first: 100, ownerAffiliations: [OWNER], orderBy: {field: NAME, direction: ASC}) {
+                    nodes {
+                        name
+                        owner {
+                            login
                         }
+                        isPrivate
+                        description
+                        updatedAt
                     }
                 }
             }
-        `;
-        
-        const data = await this.graphql(query);
-        return data.data.viewer.repositories.nodes.map(repo => ({
-            name: repo.name,
-            type: 'repo',
-            path: `${repo.owner.login}/${repo.name}`,
-            private: repo.isPrivate,
-            description: repo.description,
-            updatedAt: repo.updatedAt
-        }));
-    },
+        }
+    `;
+    
+    const data = await this.graphql(query);
+    
+    // 并行检查每个仓库的Pages状态
+    const reposWithPagesStatus = await Promise.all(
+        data.data.viewer.repositories.nodes.map(async repo => {
+            try {
+                const pagesStatus = await this.getPagesStatus(repo.owner.login, repo.name);
+                const pagesEnabled = pagesStatus && (pagesStatus.status === 'built' || pagesStatus.status === 'building');
+                
+                return {
+                    name: repo.name,
+                    type: 'repo',
+                    path: `${repo.owner.login}/${repo.name}`,
+                    private: repo.isPrivate,
+                    description: repo.description,
+                    updatedAt: repo.updatedAt,
+                    pagesEnabled: pagesEnabled  // 新增字段
+                };
+            } catch (error) {
+                console.error(`检查仓库 ${repo.name} Pages状态失败:`, error);
+                return {
+                    name: repo.name,
+                    type: 'repo',
+                    path: `${repo.owner.login}/${repo.name}`,
+                    private: repo.isPrivate,
+                    description: repo.description,
+                    updatedAt: repo.updatedAt,
+                    pagesEnabled: false
+                };
+            }
+        })
+    );
+
+    return reposWithPagesStatus;
+},
 
     // 获取仓库内容
     async getRepositoryContents(repo, path = '') {
@@ -2483,45 +2514,58 @@ createFileItem(item) {
     },
 
     // 创建文件信息
-    createFileInfo(item) {
-        const infoContainer = document.createElement('div');
-        infoContainer.className = 'flex-1 min-w-0';
+createFileInfo(item) {
+    const infoContainer = document.createElement('div');
+    infoContainer.className = 'flex-1 min-w-0';
 
-        const name = document.createElement('div');
-        name.className = 'font-medium truncate';
-        name.textContent = item.name;
+    const nameContainer = document.createElement('div');
+    nameContainer.className = 'flex items-center gap-2 mb-1';
 
-        const meta = document.createElement('div');
-        meta.className = 'text-xs text-gray-500 truncate';
+    const name = document.createElement('div');
+    name.className = 'font-medium truncate';
+    name.textContent = item.name;
 
-        if (item.type === 'repo') {
-            meta.textContent = item.private ? '私有仓库' : '公开仓库';
-            if (item.description) {
-                meta.textContent += ' • ' + item.description;
-            }
-            if (item.updatedAt) {
-                meta.textContent += ' • 更新: ' + this.formatDate(item.updatedAt);
-            }
-        } else if (item.type === 'file') {
-            meta.textContent = this.formatFileSize(item.size);
-            
-            // 添加操作链接（桌面端显示）
-            if (window.innerWidth > 768) {
-                const openLink = this.createActionLink('编辑', () => EditorManager.openFileInEditor(item));
-                const downloadLink = this.createActionLink('下载', () => this.downloadFile(item));
-                
-                meta.appendChild(openLink);
-                meta.appendChild(downloadLink);
-            }
-        } else {
-            meta.textContent = '文件夹 • 点击进入';
+    nameContainer.appendChild(name);
+
+    // 新增：如果是仓库且已部署网站，显示标签
+    if (item.type === 'repo' && item.pagesEnabled) {
+        const siteBadge = document.createElement('span');
+        siteBadge.className = 'bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium';
+        siteBadge.textContent = '网站已部署';
+        nameContainer.appendChild(siteBadge);
+    }
+
+    const meta = document.createElement('div');
+    meta.className = 'text-xs text-gray-500 truncate';
+
+    if (item.type === 'repo') {
+        meta.textContent = item.private ? '私有仓库' : '公开仓库';
+        if (item.description) {
+            meta.textContent += ' • ' + item.description;
         }
+        if (item.updatedAt) {
+            meta.textContent += ' • 更新: ' + this.formatDate(item.updatedAt);
+        }
+    } else if (item.type === 'file') {
+        meta.textContent = this.formatFileSize(item.size);
+        
+        // 添加操作链接（桌面端显示）
+        if (window.innerWidth > 768) {
+            const openLink = this.createActionLink('编辑', () => EditorManager.openFileInEditor(item));
+            const downloadLink = this.createActionLink('下载', () => this.downloadFile(item));
+            
+            meta.appendChild(openLink);
+            meta.appendChild(downloadLink);
+        }
+    } else {
+        meta.textContent = '文件夹 • 点击进入';
+    }
 
-        infoContainer.appendChild(name);
-        infoContainer.appendChild(meta);
+    infoContainer.appendChild(nameContainer);
+    infoContainer.appendChild(meta);
 
-        return infoContainer;
-    },
+    return infoContainer;
+},
 
     // 创建操作链接
     createActionLink(text, onClick) {
@@ -2841,7 +2885,7 @@ const NavigationManager = {
             
             FileManager.renderFileList(sortedContents);
             
-            // 智能显示静态网站按钮
+            // 智能显示部署网站按钮
             this.updateStaticSiteButton(contents, path);
             
         } catch (error) {
@@ -2981,7 +3025,7 @@ const NavigationManager = {
         container.appendChild(separator);
     },
 
-    // 更新静态网站按钮显示
+    // 更新部署网站按钮显示
     updateStaticSiteButton(contents, path) {
         const hasWebContent = contents.some(file => 
             file.type === 'file' && 
@@ -3733,7 +3777,7 @@ const DialogManager = {
         forkRepoDialog.querySelector('.dialog-content').classList.remove('scale-100');
     },
 
-    // 显示静态网站对话框
+    // 显示部署网站对话框
     showStaticSiteDialog() {
         const { staticSiteDialog, pagesBranch, pagesFolder, pagesStatus, staticSiteEnable } = DOMManager.elements;
         
@@ -3758,7 +3802,7 @@ const DialogManager = {
         staticSiteDialog.querySelector('.dialog-content').classList.remove('scale-90');
     },
 
-    // 隐藏静态网站对话框
+    // 隐藏部署网站对话框
     hideStaticSiteDialog() {
         const { staticSiteDialog } = DOMManager.elements;
         
@@ -3846,36 +3890,47 @@ const ContextMenuManager = {
         contextMenu.classList.add('visible');
     },
 
-    // 更新菜单项可见性
-    updateMenuVisibility(fileInfo) {
-        const {
-            contextOpen, contextDownload, contextRename,
-            contextCopyLink, contextCopyProxyLink, contextDelete,
-            contextDownloadSource, contextEnablePages, contextBuildApp
-        } = DOMManager.elements;
+   // 更新菜单项可见性
+updateMenuVisibility(fileInfo) {
+    const {
+        contextOpen, contextDownload, contextRename,
+        contextCopyLink, contextCopyProxyLink, contextDelete,
+        contextDownloadSource, contextEnablePages, contextBuildApp,
+        contextCopyRepoLink, contextCopySiteLink  // 新增
+    } = DOMManager.elements;
 
-        contextOpen.style.display = fileInfo.type === 'dir' || fileInfo.type === 'repo' ? 'flex' : 'none';
-        contextDownload.style.display = fileInfo.type === 'file' ? 'flex' : 'none';
-        contextRename.style.display = fileInfo.type === 'file' || fileInfo.type === 'dir' ? 'flex' : 'none';
-        contextCopyLink.style.display = fileInfo.type === 'file' ? 'flex' : 'none';
-        contextCopyProxyLink.style.display = fileInfo.type === 'file' ? 'flex' : 'none';
-        contextDelete.style.display = 'flex';
-        contextDownloadSource.style.display = fileInfo.type === 'repo' ? 'flex' : 'none';
-        
-        // 智能显示Pages相关菜单项
-        const isRepo = fileInfo.type === 'repo';
-        const isRootDir = fileInfo.type === 'dir' && StateManager.currentPath === '';
-        const isDocsDir = fileInfo.type === 'dir' && fileInfo.name.toLowerCase() === 'docs';
-        
-        const showPagesOption = isRepo || isRootDir || isDocsDir;
-        contextEnablePages.style.display = showPagesOption ? 'flex' : 'none';
-        
-        if (showPagesOption) {
-            this.updatePagesMenuButton(fileInfo);
-        }
-        
-        contextBuildApp.style.display = fileInfo.type === 'repo' ? 'flex' : 'none';
-    },
+    contextOpen.style.display = fileInfo.type === 'dir' || fileInfo.type === 'repo' ? 'flex' : 'none';
+    contextDownload.style.display = fileInfo.type === 'file' ? 'flex' : 'none';
+    contextRename.style.display = fileInfo.type === 'file' || fileInfo.type === 'dir' ? 'flex' : 'none';
+    contextCopyLink.style.display = fileInfo.type === 'file' ? 'flex' : 'none';
+    contextCopyProxyLink.style.display = fileInfo.type === 'file' ? 'flex' : 'none';
+    contextDelete.style.display = 'flex';
+    contextDownloadSource.style.display = fileInfo.type === 'repo' ? 'flex' : 'none';
+    
+    // 仓库链接相关菜单项
+    contextCopyRepoLink.style.display = fileInfo.type === 'repo' ? 'flex' : 'none';
+    
+    // 智能显示网站链接（仅当网站已部署时显示）
+    if (fileInfo.type === 'repo' && fileInfo.pagesEnabled) {
+        contextCopySiteLink.classList.remove('hidden');
+    } else {
+        contextCopySiteLink.classList.add('hidden');
+    }
+    
+    // 智能显示Pages相关菜单项
+    const isRepo = fileInfo.type === 'repo';
+    const isRootDir = fileInfo.type === 'dir' && StateManager.currentPath === '';
+    const isDocsDir = fileInfo.type === 'dir' && fileInfo.name.toLowerCase() === 'docs';
+    
+    const showPagesOption = isRepo || isRootDir || isDocsDir;
+    contextEnablePages.style.display = showPagesOption ? 'flex' : 'none';
+    
+    if (showPagesOption) {
+        this.updatePagesMenuButton(fileInfo);
+    }
+    
+    contextBuildApp.style.display = fileInfo.type === 'repo' ? 'flex' : 'none';
+},
 
     // 更新Pages菜单按钮
     async updatePagesMenuButton(fileInfo) {
@@ -3886,9 +3941,9 @@ const ContextMenuManager = {
         const isEnabled = await this.checkPagesStatus(targetRepo);
         
         if (isEnabled) {
-            contextEnablePages.innerHTML = '<i class="fas fa-ban mr-2 text-red-500"></i><span class="text-red-500">禁用静态网站</span>';
+            contextEnablePages.innerHTML = '<i class="fas fa-ban mr-2 text-red-500"></i><span class="text-red-500">禁用网站</span>';
         } else {
-            contextEnablePages.innerHTML = '<i class="fas fa-globe mr-2 text-green-500"></i><span class="text-green-500">启用静态网站</span>';
+            contextEnablePages.innerHTML = '<i class="fas fa-globe mr-2 text-green-500"></i><span class="text-green-500">部署网站</span>';
         }
     },
 
@@ -3983,41 +4038,59 @@ getTargetRepo(fileInfo) {
     },
 
     // 处理菜单项点击
-    handleMenuItemClick(action) {
-        if (!StateManager.contextMenuTarget) return;
-        
-        switch (action) {
-            case 'open':
-                this.openContextItem(StateManager.contextMenuTarget);
-                break;
-            case 'download':
-                FileManager.downloadFile(StateManager.contextMenuTarget);
-                break;
-            case 'rename':
-                this.renameFile(StateManager.contextMenuTarget);
-                break;
-            case 'copy-link':
-                this.copyFileLink(StateManager.contextMenuTarget, 'raw');
-                break;
-            case 'copy-proxy-link':
-                this.copyFileLink(StateManager.contextMenuTarget, 'cdn');
-                break;
-            case 'delete':
-                this.deleteContextItem(StateManager.contextMenuTarget);
-                break;
-            case 'download-source':
-                this.downloadRepositorySource(StateManager.contextMenuTarget);
-                break;
-            case 'enable-pages':
-                this.toggleGitHubPages(StateManager.contextMenuTarget);
-                break;
-            case 'build-app':
-                this.buildApp(StateManager.contextMenuTarget);
-                break;
-        }
-        
-        this.hide();
-    },
+handleMenuItemClick(action) {
+    if (!StateManager.contextMenuTarget) return;
+    
+    switch (action) {
+        case 'open':
+            this.openContextItem(StateManager.contextMenuTarget);
+            break;
+        case 'download':
+            FileManager.downloadFile(StateManager.contextMenuTarget);
+            break;
+        case 'rename':
+            this.renameFile(StateManager.contextMenuTarget);
+            break;
+        case 'copy-link':
+            this.copyFileLink(StateManager.contextMenuTarget, 'raw');
+            break;
+        case 'copy-proxy-link':
+            this.copyFileLink(StateManager.contextMenuTarget, 'cdn');
+            break;
+        case 'copy-repo-link':  // 新增
+            this.copyRepoLink(StateManager.contextMenuTarget);
+            break;
+        case 'copy-site-link':  // 新增
+            this.copySiteLink(StateManager.contextMenuTarget);
+            break;
+        case 'delete':
+            this.deleteContextItem(StateManager.contextMenuTarget);
+            break;
+        case 'download-source':
+            this.downloadRepositorySource(StateManager.contextMenuTarget);
+            break;
+        case 'enable-pages':
+            this.toggleGitHubPages(StateManager.contextMenuTarget);
+            break;
+        case 'build-app':
+            this.buildApp(StateManager.contextMenuTarget);
+            break;
+    }
+    
+    this.hide();
+},
+
+// 复制仓库链接
+copyRepoLink(repoInfo) {
+    const repoUrl = `https://github.com/${repoInfo.path}`;
+    this.copyToClipboard(repoUrl, '仓库链接已复制');
+},
+
+// 复制网站链接
+copySiteLink(repoInfo) {
+    const siteUrl = `https://${repoInfo.path.split('/')[0]}.github.io/${repoInfo.path.split('/')[1]}`;
+    this.copyToClipboard(siteUrl, '网站链接已复制');
+},
 
     // 打开上下文菜单项
     openContextItem(fileInfo) {
@@ -4382,10 +4455,10 @@ async toggleGitHubPages(fileInfo) {
         const [owner, repoName] = targetRepo.split('/');
         
         if (isEnabled) {
-            // 禁用静态网站
+            // 禁用部署网站
             await APIService.disableGitHubPages(owner, repoName);
             StateManager.pagesEnabledMap.set(targetRepo, false);
-            ToastManager.show('静态网站已禁用');
+            ToastManager.show('网站已禁用');
             
             // 隐藏上下文菜单
             this.hide();
@@ -4396,7 +4469,7 @@ async toggleGitHubPages(fileInfo) {
             }, 500);
             
         } else {
-            // 启用静态网站 - 显示配置对话框
+            // 启用部署网站 - 显示配置对话框
             this.hide(); // 先隐藏上下文菜单
             
             // 延迟显示对话框，避免菜单干扰
@@ -4814,7 +4887,7 @@ initializePageState() {
         uploadFile?.addEventListener('click', () => this.handleFileUpload());
         uploadCancel?.addEventListener('click', () => DialogManager.hideUploadDialog());
 
-        // 静态网站对话框
+        // 部署网站对话框
         staticSiteEnable?.addEventListener('click', () => this.enableGitHubPages());
         staticSiteCancel?.addEventListener('click', () => DialogManager.hideStaticSiteDialog());
 
@@ -4832,27 +4905,31 @@ initializePageState() {
         this.bindDialogMaskEvents();
     },
 
-    // 绑定上下文菜单事件
-    bindContextMenuEvents() {
-        const {
-            contextOpen, contextDownload, contextRename,
-            contextCopyLink, contextCopyProxyLink, contextDelete,
-            contextEnablePages, contextBuildApp, contextDownloadSource
-        } = DOMManager.elements;
+   
+// 绑定上下文菜单事件
+bindContextMenuEvents() {
+    const {
+        contextOpen, contextDownload, contextRename,
+        contextCopyLink, contextCopyProxyLink, contextDelete,
+        contextEnablePages, contextBuildApp, contextDownloadSource,
+        contextCopyRepoLink, contextCopySiteLink  // 确保包含新增的菜单项
+    } = DOMManager.elements;
 
-        contextOpen?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('open'));
-        contextDownload?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('download'));
-        contextRename?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('rename'));
-        contextCopyLink?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('copy-link'));
-        contextCopyProxyLink?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('copy-proxy-link'));
-        contextDelete?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('delete'));
-        contextDownloadSource?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('download-source'));
-        contextEnablePages?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('enable-pages'));
-        contextBuildApp?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('build-app'));
+    contextOpen?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('open'));
+    contextDownload?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('download'));
+    contextRename?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('rename'));
+    contextCopyLink?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('copy-link'));
+    contextCopyProxyLink?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('copy-proxy-link'));
+    contextCopyRepoLink?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('copy-repo-link'));
+    contextCopySiteLink?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('copy-site-link'));
+    contextDelete?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('delete'));
+    contextDownloadSource?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('download-source'));
+    contextEnablePages?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('enable-pages'));
+    contextBuildApp?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('build-app'));
 
-        // 点击其他地方隐藏上下文菜单
-        document.addEventListener('click', () => ContextMenuManager.hide());
-    },
+    // 点击其他地方隐藏上下文菜单
+    document.addEventListener('click', () => ContextMenuManager.hide());
+},
 
     // 绑定对话框遮罩层事件
     bindDialogMaskEvents() {
@@ -5494,7 +5571,7 @@ async enableGitHubPages() {
         // 更新状态映射
         StateManager.pagesEnabledMap.set(targetRepo, true);
         
-        ToastManager.show(`静态网站已启用: ${targetRepo}`);
+        ToastManager.show(`网站已部署: ${targetRepo}`);
         DialogManager.hideStaticSiteDialog();
         
         // 更新菜单按钮状态
@@ -5508,7 +5585,7 @@ async enableGitHubPages() {
         StateManager.contextMenuTarget = null;
         
     } catch (error) {
-        console.error('启用静态网站错误:', error);
+        console.error('部署网站错误:', error);
         ToastManager.show('操作失败: ' + error.message);
         
         // 恢复按钮状态
