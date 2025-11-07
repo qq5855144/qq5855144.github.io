@@ -4233,7 +4233,7 @@ copyFileLink(fileInfo, type) {
             fileInfo.html_url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
         
         // 使用 hub.gitmirror.com 代理（前缀方式）
-        link = `https://hub.gitmirror.com/${rawUrl}`;
+        link = `https://gh-proxy.com/${rawUrl}`;
         successMessage = '代理链接已复制';
     }
     
