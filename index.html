@@ -1704,6 +1704,7 @@ const StateManager = {
     buildTimer: null,
     buildStatus: null,
     pagesEnabledMap: new Map(),
+    directoryCache: new Map(), // 新增：目录缓存容器（key: "repo/path", value: {files, timestamp}）
     
     // 编辑器相关状态
     editor: null,
@@ -1711,97 +1712,97 @@ const StateManager = {
     monacoInitialized: false,
     monacoLoadAttempted: false,
     monacoLoadPromise: null,
-
+    
     // 状态操作方法
     resetSelection() {
         this.selectedFiles.clear();
         this.updateSelectedCount();
     },
-
     updateSelectedCount() {
         const selectedCount = document.getElementById('selected-count');
         if (selectedCount) {
             selectedCount.textContent = this.selectedFiles.size;
         }
     },
-
     setCurrentRepo(repo) {
         this.currentRepo = repo;
     },
-
     setCurrentPath(path) {
         this.currentPath = path;
     },
-
     setCurrentFiles(files) {
         this.currentFiles = files;
     },
-
     setToken(token) {
         this.githubToken = token;
         localStorage.setItem('github_token', token);
     },
-
     clearToken() {
         this.githubToken = '';
         localStorage.removeItem('github_token');
     },
-
     addSelectedFile(file) {
-    // 使用文件的路径作为唯一标识符
-    const fileKey = file.path || `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${file.name}`;
-    
-    // 检查是否已存在
-    let exists = false;
-    for (let selectedFile of this.selectedFiles) {
-        const selectedKey = selectedFile.path || `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${selectedFile.name}`;
-        if (selectedKey === fileKey) {
-            exists = true;
-            break;
+        const fileKey = file.path || `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${file.name}`;
+        let exists = false;
+        for (let selectedFile of this.selectedFiles) {
+            const selectedKey = selectedFile.path || `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${selectedFile.name}`;
+            if (selectedKey === fileKey) {
+                exists = true;
+                break;
+            }
         }
-    }
-    
-    if (!exists) {
-        this.selectedFiles.add(file);
+        if (!exists) {
+            this.selectedFiles.add(file);
+            this.updateSelectedCount();
+        }
+    },
+    removeSelectedFile(file) {
+        const fileKey = file.path || `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${file.name}`;
+        for (let selectedFile of this.selectedFiles) {
+            const selectedKey = selectedFile.path || `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${selectedFile.name}`;
+            if (selectedKey === fileKey) {
+                this.selectedFiles.delete(selectedFile);
+                break;
+            }
+        }
         this.updateSelectedCount();
-    }
-},
-
-removeSelectedFile(file) {
-    // 找到并删除对应的文件
-    const fileKey = file.path || `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${file.name}`;
+    },
+    clearSelectedFiles() {
+        this.selectedFiles.clear();
+        this.updateSelectedCount();
+    },
     
-    for (let selectedFile of this.selectedFiles) {
-        const selectedKey = selectedFile.path || `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${selectedFile.name}`;
-        if (selectedKey === fileKey) {
-            this.selectedFiles.delete(selectedFile);
-            break;
-        }
-    }
-    this.updateSelectedCount();
-},
-
-clearSelectedFiles() {
-    this.selectedFiles.clear();
-    this.updateSelectedCount();
-},
-
-updateSelectedCount() {
-    const selectedCount = document.getElementById('selected-count');
-    if (selectedCount) {
-        selectedCount.textContent = this.selectedFiles.size;
+    // 新增：缓存目录数据（key: "repo/path", 包含时间戳用于过期判断）
+    cacheDirectory(repo, path, files) {
+        const cacheKey = path ? `${repo}/${path}` : repo;
+        this.directoryCache.set(cacheKey, {
+            files: [...files], // 深拷贝避免引用污染
+            timestamp: Date.now() // 记录缓存时间
+        });
+    },
+    
+    // 新增：获取缓存目录数据（默认缓存10分钟，可调整）
+    getCachedDirectory(repo, path) {
+    const cacheKey = path ? `${repo}/${path}` : repo; 
+    const cacheData = this.directoryCache.get(cacheKey);
+    if (!cacheData) return null;
+    
+    const cacheExpireTime = 600000; // 10分钟过期
+    if (Date.now() - cacheData.timestamp > cacheExpireTime) {
+        this.directoryCache.delete(cacheKey);
+        return null;
     }
     
-    // 更新批量工具栏显示
-    const batchToolbar = document.getElementById('batch-toolbar');
-    if (batchToolbar) {
-        if (this.selectedFiles.size > 0) {
-            batchToolbar.classList.add('visible');
-        } else {
-            batchToolbar.classList.remove('visible');
-        }
+    return [...cacheData.files];
+},
+    
+    // 新增：手动清除指定目录缓存（可选，用于文件操作后刷新）
+    clearDirectoryCache(repo, path) {
+        const cacheKey = path ? `${repo}/${path}` : repo;
+        this.directoryCache.delete(cacheKey);
     }
-}};
+};
+
 
 // ==================== DOM 管理模块 ====================
 const DOMManager = {
@@ -2327,17 +2328,20 @@ decodeBase64Content(base64) {
 
     // 创建仓库 - 修复版本
 async createRepository(name, description, isPrivate) {
-    const response = await this.request(`${this.baseURL}/user/repos`, {
-        method: 'POST',
-        body: JSON.stringify({
-            name,
-            description: description || '',
-            private: !!isPrivate,
-            auto_init: true
-        })
-    });
-
-    return response.json();
+    try {
+        ToastManager.show('正在创建仓库...');
+        const result = await APIService.createRepository(name, description, isPrivate);
+        
+        ToastManager.show(`仓库 "${name}" 创建成功`);
+        StateManager.clearDirectoryCache('repositories', ''); 
+        NavigationManager.loadRepositories(); 
+        
+        return result;
+    } catch (error) {
+        console.error('创建仓库错误:', error);
+        ToastManager.show('创建仓库失败: ' + error.message);
+        throw error;
+    }
 },
 
     // 删除仓库
@@ -2842,19 +2846,26 @@ createFileInfo(item) {
 
 // ==================== 导航管理模块 ====================
 const NavigationManager = {
-    // 加载仓库列表 - 修复版本
+    // 加载仓库列表 - 修复缓存逻辑：优先读缓存
     async loadRepositories() {
         DOMManager.showLoading();
         StateManager.setCurrentPath('');
         StateManager.setCurrentRepo('');
         this.updateBreadcrumb([]);
         DOMManager.updateButtonVisibility(true);
-
-        // 添加到浏览器历史记录 - 修复：确保正确添加状态
         this.pushHistoryState('repositories', { type: 'repositories' });
-
+        
+        // 优先读取仓库列表缓存（key: 'repositories' 特殊标识）
+        const cachedRepos = StateManager.getCachedDirectory('repositories', '');
+        if (cachedRepos) {
+            FileManager.renderFileList(cachedRepos);
+            return; // 缓存命中，直接渲染，不请求接口
+        }
+        
+        // 无缓存时请求接口（原有逻辑）
         try {
             const repos = await APIService.getRepositories();
+            StateManager.cacheDirectory('repositories', '', repos); // 缓存仓库列表
             FileManager.renderFileList(repos);
         } catch (error) {
             console.error('加载仓库列表错误:', error);
@@ -2862,25 +2873,44 @@ const NavigationManager = {
             DOMManager.showEmptyState();
         }
     },
-
-    // 加载仓库内容 - 修复版本
+    
+    // 加载仓库内容 - 优化后：优先读缓存，无缓存再请求
     async loadRepositoryContents(repo, path = '') {
         DOMManager.showLoading();
         StateManager.setCurrentRepo(repo);
         StateManager.setCurrentPath(path);
-        
         DOMManager.updateButtonVisibility(false);
         
         // 更新面包屑导航
         const pathParts = path ? path.split('/') : [];
         this.updateBreadcrumb([repo, ...pathParts]);
         
-        // 添加到浏览器历史记录 - 修复：确保每次都添加
+        // 添加到浏览器历史记录
         this.pushHistoryState('contents', { repo, path });
-
+        
+        // 优先读取缓存
+        const cachedFiles = StateManager.getCachedDirectory(repo, path);
+        if (cachedFiles) {
+            StateManager.setCurrentFiles(cachedFiles);
+            
+            // 排序（保持原有排序逻辑）
+            const sortedContents = [...cachedFiles].sort((a, b) => {
+                if (a.type === b.type) {
+                    return a.name.localeCompare(b.name);
+                }
+                return a.type === 'dir' ? -1 : 1;
+            });
+            
+            FileManager.renderFileList(sortedContents);
+            this.updateStaticSiteButton(cachedFiles, path);
+            return; // 缓存命中，直接返回，不请求接口
+        }
+        
+        // 无缓存时请求接口（原有逻辑）
         try {
             const contents = await APIService.getRepositoryContents(repo, path);
             StateManager.setCurrentFiles(contents);
+            StateManager.cacheDirectory(repo, path, contents); // 缓存新请求的数据
             
             const sortedContents = [...contents].sort((a, b) => {
                 if (a.type === b.type) {
@@ -2890,8 +2920,6 @@ const NavigationManager = {
             });
             
             FileManager.renderFileList(sortedContents);
-            
-            // 智能显示部署网站按钮
             this.updateStaticSiteButton(contents, path);
             
         } catch (error) {
@@ -2900,8 +2928,8 @@ const NavigationManager = {
             DOMManager.showEmptyState();
         }
     },
-
-    // 添加到浏览器历史记录 - 修复版本
+    
+    // 以下方法保持不变，直接保留原有代码
     pushHistoryState(type, data) {
         const state = {
             type: type,
@@ -2912,25 +2940,20 @@ const NavigationManager = {
         const title = type === 'repositories' ? '我的仓库' : `${data.repo} - ${data.path || '根目录'}`;
         const url = this.createURL(type, data);
         
-        // 修复：检查是否与当前状态相同，避免重复添加
         const currentState = history.state;
         if (currentState && 
             currentState.type === type && 
             JSON.stringify(currentState.data) === JSON.stringify(data)) {
-            return; // 状态相同，不重复添加
+            return;
         }
         
-        // 修复：使用正确的历史记录管理
         if (!currentState) {
-            // 首次加载，使用 replaceState
             history.replaceState(state, title, url);
         } else {
-            // 后续导航，使用 pushState
             history.pushState(state, title, url);
         }
     },
-
-    // 创建URL - 修复版本
+    
     createURL(type, data) {
         if (type === 'repositories') {
             return window.location.pathname; 
@@ -2941,10 +2964,8 @@ const NavigationManager = {
         }
         return window.location.pathname;
     },
-
-    // 处理浏览器前进/后退 - 修复版本
+    
     handlePopState(event) {
-        // 优先使用event.state，如果没有则解析URL
         if (event.state && event.state.type) {
             const { type, data } = event.state;
             this.navigateToState(type, data);
@@ -2954,9 +2975,7 @@ const NavigationManager = {
         }
     },
     
-    // 解析URL参数
     parseURL() {
-        // 如果URL中没有参数，默认显示仓库列表
         if (!window.location.search) {
             return { type: 'repositories', data: {} };
         }
@@ -2970,27 +2989,22 @@ const NavigationManager = {
         }
         return { type: 'repositories', data: {} };
     },
-
-    // 导航到指定状态
+    
     navigateToState(type, data) {
         if (type === 'repositories') {
             this.loadRepositories();
         } else if (type === 'contents') {
             this.loadRepositoryContents(data.repo, data.path);
         } else {
-            // 默认情况
             this.loadRepositories();
         }
     },
-
-    // 更新面包屑导航
+    
     updateBreadcrumb(parts) {
         const breadcrumbContainer = DOMManager.elements.currentPath?.querySelector('.breadcrumb');
         if (!breadcrumbContainer) return;
-
         breadcrumbContainer.innerHTML = '';
         
-        // 添加"我的仓库"根路径
         const rootItem = document.createElement('div');
         rootItem.className = 'breadcrumb-item';
         rootItem.innerHTML = '<i class="fab fa-github mr-1"></i><span>我的仓库</span>';
@@ -2999,17 +3013,14 @@ const NavigationManager = {
             
         if (parts.length === 0) return;
         
-        // 添加分隔符
         this.addBreadcrumbSeparator(breadcrumbContainer);
         
-        // 添加仓库部分
         const repoItem = document.createElement('div');
         const repoName = parts[0].split('/').pop();
         repoItem.textContent = repoName;
         repoItem.onclick = () => this.loadRepositoryContents(parts[0]);
         breadcrumbContainer.appendChild(repoItem);
         
-        // 添加路径部分
         for (let i = 1; i < parts.length; i++) {
             this.addBreadcrumbSeparator(breadcrumbContainer);
             
@@ -3022,16 +3033,14 @@ const NavigationManager = {
             breadcrumbContainer.appendChild(pathItem);
         }
     },
-
-    // 添加面包屑分隔符
+    
     addBreadcrumbSeparator(container) {
         const separator = document.createElement('div');
         separator.className = 'breadcrumb-separator';
         separator.innerHTML = '<i class="fas fa-chevron-right"></i>';
         container.appendChild(separator);
     },
-
-    // 更新部署网站按钮显示
+    
     updateStaticSiteButton(contents, path) {
         const hasWebContent = contents.some(file => 
             file.type === 'file' && 
@@ -3047,8 +3056,7 @@ const NavigationManager = {
             DOMManager.hide(DOMManager.elements.staticSiteBtn);
         }
     },
-
-    // 返回上一级
+    
     goBack() {
         if (!StateManager.currentPath) {
             this.loadRepositories();
@@ -3066,6 +3074,7 @@ const NavigationManager = {
         }
     }
 };
+
 
 // ==================== 编辑器管理模块 ====================
 const EditorManager = {
@@ -5008,18 +5017,22 @@ bindContextMenuEvents() {
     },
 
     // 处理确认对话框的确认操作
-    async handleConfirmYes() {
-        if (StateManager.fileToDelete) {
-            if (Array.isArray(StateManager.fileToDelete)) {
-                await this.deleteFiles(StateManager.fileToDelete);
-            } else if (StateManager.fileToDelete.type === 'repo') {
-                await this.deleteRepository(StateManager.fileToDelete);
-            } else {
-                await this.deleteFile(StateManager.fileToDelete);
-            }
+async handleConfirmYes() {
+    if (StateManager.fileToDelete) {
+        if (Array.isArray(StateManager.fileToDelete)) {
+            await this.deleteFiles(StateManager.fileToDelete);
+        } else if (StateManager.fileToDelete.type === 'repo') {
+            await this.deleteRepository(StateManager.fileToDelete);
+            StateManager.clearDirectoryCache('repositories', ''); // 清除仓库列表缓存
+        } else {
+            await this.deleteFile(StateManager.fileToDelete);
+            // 清除当前目录缓存（删除文件后刷新）
+            StateManager.clearDirectoryCache(StateManager.currentRepo, StateManager.currentPath);
         }
-        DialogManager.hideConfirmDialog();
-    },
+    }
+    DialogManager.hideConfirmDialog();
+},
+
 
    // 删除文件或文件夹 - 修复版本
 async deleteFile(fileInfo) {
@@ -5441,7 +5454,6 @@ async handleFileUpload() {
         ToastManager.show('请先选择文件');
         return;
     }
-
     try {
         const files = Array.from(DOMManager.elements.fileInput.files);
         
@@ -5451,14 +5463,12 @@ async handleFileUpload() {
             ToastManager.show(`文件 ${oversizedFiles[0].name} 超过100MB限制`);
             return;
         }
-
         let successfulUploads = 0;
         let failedUploads = 0;
         
         // 显示上传进度
         const progressToast = ToastManager.createProgressToast(`准备上传 ${files.length} 个文件...`);
         DialogManager.hideUploadDialog();
-
         // 顺序上传每个文件
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
@@ -5485,7 +5495,10 @@ async handleFileUpload() {
                 }
             }
         }
-
+           
+        // 上传完成后清除当前目录缓存（关键）
+        StateManager.clearDirectoryCache(StateManager.currentRepo, StateManager.currentPath);
+        
         ToastManager.removeProgressToast();
         
         if (failedUploads === 0) {
@@ -5493,7 +5506,8 @@ async handleFileUpload() {
         } else {
             ToastManager.show(`上传完成: ${successfulUploads} 成功, ${failedUploads} 失败`);
         }
-
+        
+        // 重新加载目录（此时会读取新数据并缓存）
         NavigationManager.loadRepositoryContents(StateManager.currentRepo, StateManager.currentPath);
     } catch (error) {
         console.error('上传过程中发生错误:', error);
@@ -5502,6 +5516,7 @@ async handleFileUpload() {
         DOMManager.elements.fileInput.value = '';
     }
 },
+
 
 
     // 上传单个文件 - 修复版本
@@ -5553,6 +5568,7 @@ async uploadSingleFile(file) {
         throw error;
     }
 },
+
 
 // 检查文件是否存在并返回文件信息
 async getFileInfoIfExists(filePath) {
