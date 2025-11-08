@@ -1311,6 +1311,11 @@
         <span>复制网站链接</span>
     </div>
     
+    <div id="context-rename-repo" class="context-menu-item">
+        <i class="fas fa-edit"></i>
+        <span>重命名仓库</span>
+    </div>
+    
     <div id="context-download" class="context-menu-item">
         <i class="fas fa-download"></i>
         <span>下载</span>
@@ -1913,6 +1918,7 @@ contextBuildApp: document.getElementById('context-build-app'),
 contextDownloadSource: document.getElementById('context-download-source'),
 contextCopyRepoLink: document.getElementById('context-copy-repo-link'),
 contextCopySiteLink: document.getElementById('context-copy-site-link'),
+contextRenameRepo: document.getElementById('context-rename-repo'),
 
             // 提示和状态
             toast: document.getElementById('toast'),
@@ -3896,9 +3902,10 @@ updateMenuVisibility(fileInfo) {
         contextOpen, contextDownload, contextRename,
         contextCopyLink, contextCopyProxyLink, contextDelete,
         contextDownloadSource, contextEnablePages, contextBuildApp,
-        contextCopyRepoLink, contextCopySiteLink  // 新增
+        contextCopyRepoLink, contextCopySiteLink,
+        // 新增：重命名仓库菜单项
+        contextRenameRepo
     } = DOMManager.elements;
-
     contextOpen.style.display = fileInfo.type === 'dir' || fileInfo.type === 'repo' ? 'flex' : 'none';
     contextDownload.style.display = fileInfo.type === 'file' ? 'flex' : 'none';
     contextRename.style.display = fileInfo.type === 'file' || fileInfo.type === 'dir' ? 'flex' : 'none';
@@ -3909,6 +3916,8 @@ updateMenuVisibility(fileInfo) {
     
     // 仓库链接相关菜单项
     contextCopyRepoLink.style.display = fileInfo.type === 'repo' ? 'flex' : 'none';
+    // 新增：重命名仓库菜单项（仅仓库显示）
+    contextRenameRepo.style.display = fileInfo.type === 'repo' ? 'flex' : 'none';
     
     // 智能显示网站链接（仅当网站已部署时显示）
     if (fileInfo.type === 'repo' && fileInfo.pagesEnabled) {
@@ -3931,6 +3940,7 @@ updateMenuVisibility(fileInfo) {
     
     contextBuildApp.style.display = fileInfo.type === 'repo' ? 'flex' : 'none';
 },
+
 
     // 更新Pages菜单按钮
     async updatePagesMenuButton(fileInfo) {
@@ -4063,6 +4073,10 @@ handleMenuItemClick(action) {
         case 'copy-site-link':  // 新增
             this.copySiteLink(StateManager.contextMenuTarget);
             break;
+        // 新增：重命名仓库处理
+        case 'rename-repo':
+            this.renameRepository(StateManager.contextMenuTarget);
+            break;
         case 'delete':
             this.deleteContextItem(StateManager.contextMenuTarget);
             break;
@@ -4106,7 +4120,7 @@ copySiteLink(repoInfo) {
         }
     },
 
-    // 重命名文件 - 完全修复版本
+    // 重命名文件 
 async renameFile(fileInfo) {
     try {
         console.log('开始重命名文件:', fileInfo);
@@ -4209,6 +4223,47 @@ async renameFile(fileInfo) {
     } catch (error) {
         console.error('重命名文件错误:', error);
         ToastManager.show('重命名文件失败: ' + error.message);
+    }
+},
+
+      // 重命名仓库
+async renameRepository(repoInfo) {
+    try {
+        const [owner, oldName] = repoInfo.path.split('/');
+        const newName = prompt('请输入新的仓库名称:', oldName);
+        
+        if (!newName || newName === oldName) return;
+        if (!/^[a-zA-Z0-9_.-]+$/.test(newName)) {
+            ToastManager.show('仓库名称只能包含字母、数字、下划线、点号和连字符');
+            return;
+        }
+
+        ToastManager.show('正在重命名仓库...');
+        
+        // 调用GitHub API重命名仓库
+        const response = await fetch(
+            `https://api.github.com/repos/${owner}/${oldName}`,
+            {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `token ${StateManager.githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: newName })
+            }
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || '重命名失败');
+        }
+
+        ToastManager.show('仓库重命名成功');
+        NavigationManager.loadRepositories(); // 刷新仓库列表
+    } catch (error) {
+        console.error('重命名仓库错误:', error);
+        ToastManager.show('重命名失败: ' + error.message);
     }
 },
 
@@ -4912,9 +4967,10 @@ bindContextMenuEvents() {
         contextOpen, contextDownload, contextRename,
         contextCopyLink, contextCopyProxyLink, contextDelete,
         contextEnablePages, contextBuildApp, contextDownloadSource,
-        contextCopyRepoLink, contextCopySiteLink  // 确保包含新增的菜单项
+        contextCopyRepoLink, contextCopySiteLink,
+        // 新增：重命名仓库菜单项
+        contextRenameRepo
     } = DOMManager.elements;
-
     contextOpen?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('open'));
     contextDownload?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('download'));
     contextRename?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('rename'));
@@ -4922,11 +4978,12 @@ bindContextMenuEvents() {
     contextCopyProxyLink?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('copy-proxy-link'));
     contextCopyRepoLink?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('copy-repo-link'));
     contextCopySiteLink?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('copy-site-link'));
+    // 新增：重命名仓库菜单项点击事件
+    contextRenameRepo?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('rename-repo'));
     contextDelete?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('delete'));
     contextDownloadSource?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('download-source'));
     contextEnablePages?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('enable-pages'));
     contextBuildApp?.addEventListener('click', () => ContextMenuManager.handleMenuItemClick('build-app'));
-
     // 点击其他地方隐藏上下文菜单
     document.addEventListener('click', () => ContextMenuManager.hide());
 },
