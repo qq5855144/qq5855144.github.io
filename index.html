@@ -245,8 +245,6 @@ body {
     margin-right: 0; /* 移除右边距 */
 }
 
-
-
 /* 仓库描述 */
 .file-meta {
     font-size: 11px;
@@ -301,22 +299,37 @@ body {
     max-width: 50px;
 }
 
+/* 图标标签样式 */
+.repo-tag-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    border-radius: 4px;
+    font-size: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.repo-tag-icon:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
 .tag-site {
-    background: rgba(34, 197, 94, 0.1);
+    background: transparent;
     color: #16a34a;
-    border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
 .tag-release {
-    background: rgba(59, 130, 246, 0.1);
+    background: transparent;
     color: #2563eb;
-    border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .tag-private {
-    background: rgba(107, 114, 128, 0.1);
+    background: transparent;
     color: #6b7280;
-    border: 1px solid rgba(107, 114, 128, 0.2);
 }
 
 /* 统计数据 */
@@ -2849,9 +2862,12 @@ const APIService = {
         }
     },
     
-    // 获取仓库内容
-    async getRepositoryContents(repo, path = '') {
+    // 获取仓库内容 - 修复版本
+async getRepositoryContents(repo, path = '') {
+    try {
         const [owner, repoName] = repo.split('/');
+        
+        // 构建 GraphQL 查询
         const query = `
             query {
                 repository(owner: "${owner}", name: "${repoName}") {
@@ -2871,12 +2887,19 @@ const APIService = {
                 }
             }
         `;
+        
         const data = await this.graphql(query);
         
-        if (!data.data.repository.object) {
+        // 添加空值检查
+        if (!data.data || !data.data.repository || !data.data.repository.object) {
+            console.warn(`仓库内容为空: ${repo}/${path}`);
             return [];
         }
-        return data.data.repository.object.entries.map(entry => ({
+        
+        // 安全地处理数据
+        const entries = data.data.repository.object.entries || [];
+        
+        return entries.map(entry => ({
             name: entry.name,
             type: entry.type === 'tree' ? 'dir' : 'file',
             size: entry.object?.byteSize || 0,
@@ -2884,7 +2907,19 @@ const APIService = {
             download_url: entry.type === 'blob' ? 
                 `https://raw.githubusercontent.com/${repo}/HEAD/${path ? path + '/' : ''}${entry.name}` : null
         }));
-    },
+        
+    } catch (error) {
+        console.error('获取仓库内容错误:', error);
+        
+        // 如果是空目录或路径不存在，返回空数组而不是抛出错误
+        if (error.message.includes('not exist') || error.message.includes('not found')) {
+            console.warn(`路径不存在或为空目录: ${repo}/${path}`);
+            return [];
+        }
+        
+        throw error;
+    }
+},
     
     // 获取文件内容 
     async getFileContent(repo, path) {
@@ -3724,33 +3759,25 @@ createFileInfo(item) {
         name.title = item.name;
         
         // 标签容器 - 移到名称后面
-        const tagsContainer = document.createElement('div');
-        tagsContainer.className = 'repo-tags';
-        
-        if (item.pagesEnabled) {
-            const siteTag = document.createElement('span');
-            siteTag.className = 'repo-tag tag-site';
-            siteTag.textContent = '网站';
-            siteTag.title = '已启用GitHub Pages';
-            tagsContainer.appendChild(siteTag);
-        }
-        
-        if (item.hasReleases) {
-            const releaseTag = document.createElement('span');
-            releaseTag.className = 'repo-tag tag-release';
-            releaseTag.textContent = '包';
-            releaseTag.title = '有发布版本';
-            tagsContainer.appendChild(releaseTag);
-        }
-        
-        if (item.private) {
-            const privateTag = document.createElement('span');
-            privateTag.className = 'repo-tag tag-private';
-            privateTag.textContent = '私有';
-            privateTag.title = '私有仓库';
-            tagsContainer.appendChild(privateTag);
-        }
-        
+const tagsContainer = document.createElement('div');
+tagsContainer.className = 'repo-tags';
+
+if (item.pagesEnabled) {
+    const siteTag = document.createElement('div');
+    siteTag.className = 'repo-tag-icon tag-site';
+    siteTag.innerHTML = '<i class="fas fa-globe"></i>';
+    siteTag.title = '已启用GitHub Pages';
+    tagsContainer.appendChild(siteTag);
+}
+
+if (item.hasReleases) {
+    const releaseTag = document.createElement('div');
+    releaseTag.className = 'repo-tag-icon tag-release';
+    releaseTag.innerHTML = '<i class="fas fa-box"></i>';
+    releaseTag.title = '有发布版本';
+    tagsContainer.appendChild(releaseTag);
+}
+                        
         // 将名称和标签容器添加到第一行（名称在前，标签在后）
         firstLine.appendChild(name);
         firstLine.appendChild(tagsContainer);
@@ -3969,37 +3996,124 @@ formatNumber(num) {
         }
     },
     
-    // 下载文件
-    async downloadFile(file) {
-        if (file.type !== 'file' || !file.download_url) return;
+    // 下载文件 - 修复版本
+async downloadFile(file) {
+    if (file.type !== 'file' || !file.download_url) {
+        ToastManager.show('无法下载此文件');
+        return;
+    }
+    
+    try {
+        ToastManager.show(`正在下载 ${file.name}...`);
         
-        try {
-            ToastManager.show(`正在下载 ${file.name}...`);
-            
-            const response = await fetch(file.download_url);
-            
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            const blob = await response.blob();
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = file.name;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            
-            // 清理
-            setTimeout(() => {
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-            }, 100);
-            
-            ToastManager.show(`已下载 ${file.name}`);
-        } catch (error) {
-            console.error('下载失败:', error);
-            ToastManager.show(`下载失败: ${error.message}`);
+        console.log('开始下载文件:', file.name, 'URL:', file.download_url);
+        
+        // 添加超时控制
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+        
+        const response = await fetch(file.download_url, {
+            signal: controller.signal,
+            headers: {
+                // 添加必要的请求头
+                'Accept': '*/*',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`下载失败: HTTP ${response.status} ${response.statusText}`);
         }
-    },
+        
+        // 检查文件大小
+        const contentLength = response.headers.get('content-length');
+        const fileSize = contentLength ? parseInt(contentLength) : 0;
+        
+        if (fileSize > 100 * 1024 * 1024) { // 100MB限制
+            throw new Error('文件过大，建议使用GitHub原生下载');
+        }
+        
+        const blob = await response.blob();
+        
+        // 检查blob是否有效
+        if (!blob || blob.size === 0) {
+            throw new Error('下载的文件为空');
+        }
+        
+        console.log('文件下载完成，大小:', blob.size, 'bytes');
+        
+        // 创建下载链接
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = file.name;
+        link.style.display = 'none';
+        
+        // 添加到DOM并触发点击
+        document.body.appendChild(link);
+        link.click();
+        
+        // 清理资源
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 100);
+        
+        ToastManager.show(`已下载 ${file.name} (${this.formatFileSize(blob.size)})`);
+        
+    } catch (error) {
+        console.error('下载失败:', error);
+        
+        let errorMessage = '下载失败: ';
+        
+        if (error.name === 'AbortError') {
+            errorMessage += '下载超时，请检查网络连接';
+        } else if (error.message.includes('Failed to fetch')) {
+            errorMessage += '网络错误，请检查网络连接';
+        } else if (error.message.includes('HTTP 403')) {
+            errorMessage += '访问被拒绝，可能是GitHub限制';
+        } else if (error.message.includes('HTTP 404')) {
+            errorMessage += '文件不存在';
+        } else {
+            errorMessage += error.message;
+        }
+        
+        ToastManager.show(errorMessage);
+        
+        // 尝试备用下载方法
+        this.fallbackDownload(file);
+    }
+},
+
+// 备用下载方法
+async fallbackDownload(file) {
+    try {
+        ToastManager.show('尝试备用下载方法...');
+        
+        // 方法1: 直接打开新窗口
+        window.open(file.download_url, '_blank');
+        
+        // 方法2: 使用GitHub原始内容API
+        setTimeout(() => {
+            const rawUrl = file.download_url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+            const fallbackLink = document.createElement('a');
+            fallbackLink.href = rawUrl;
+            fallbackLink.target = '_blank';
+            fallbackLink.style.display = 'none';
+            document.body.appendChild(fallbackLink);
+            fallbackLink.click();
+            setTimeout(() => {
+                document.body.removeChild(fallbackLink);
+            }, 100);
+        }, 1000);
+        
+    } catch (fallbackError) {
+        console.error('备用下载也失败:', fallbackError);
+        ToastManager.show('所有下载方法都失败，请手动访问文件页面下载');
+    }
+},
     
     // 显示图片预览
     showImagePreview(item) {
@@ -4264,36 +4378,86 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// ==================== 自动刷新管理模块 ====================
+// ==================== 自动刷新管理模块 - 修复版 ====================
 const AutoRefreshManager = {
-    // 刷新当前视图
-    refreshCurrentView() {
+    // 刷新当前视图 - 增强版
+    refreshCurrentView(forceRefresh = false) {
+        console.log('刷新当前视图，强制模式:', forceRefresh);
+        
+        // 强制清除所有相关缓存
+        if (forceRefresh) {
+            this.clearAllRelatedCaches();
+        }
+        
         if (StateManager.currentRepo && StateManager.currentPath !== undefined) {
-            // 刷新仓库内容
-            NavigationManager.loadRepositoryContents(StateManager.currentRepo, StateManager.currentPath);
+            // 刷新仓库内容，不使用缓存
+            NavigationManager.loadRepositoryContents(StateManager.currentRepo, StateManager.currentPath, false);
+        } else if (StateManager.currentSearchQuery) {
+            // 刷新搜索结果，不使用缓存
+            NavigationManager.loadSearchResults(StateManager.currentSearchQuery, 1, false);
         } else {
-            // 刷新仓库列表
-            NavigationManager.loadRepositories();
+            // 刷新仓库列表，不使用缓存
+            NavigationManager.loadRepositories(false);
         }
     },
     
-    // 操作后刷新（带延迟）
-    refreshAfterOperation(delay = 1000) {
+    // 操作后刷新（带延迟）- 增强版
+    refreshAfterOperation(delay = 800, forceRefresh = true) {
+        console.log(`计划在 ${delay}ms 后刷新，强制模式: ${forceRefresh}`);
         setTimeout(() => {
-            this.refreshCurrentView();
+            this.refreshCurrentView(forceRefresh);
         }, delay);
     },
     
-    // 清除相关缓存并刷新
-    refreshWithCacheClear() {
+    // 清除所有相关缓存 - 新增方法
+    clearAllRelatedCaches() {
+        console.log('清除所有相关缓存');
+        
         // 清除当前目录缓存
         if (StateManager.currentRepo) {
             StateManager.clearDirectoryCache(StateManager.currentRepo, StateManager.currentPath);
+            
+            // 同时清除父目录缓存（用于面包屑导航更新）
+            if (StateManager.currentPath) {
+                const pathParts = StateManager.currentPath.split('/');
+                for (let i = pathParts.length; i > 0; i--) {
+                    const parentPath = pathParts.slice(0, i).join('/');
+                    StateManager.clearDirectoryCache(StateManager.currentRepo, parentPath);
+                }
+            }
+            
+            // 清除仓库根目录缓存
+            StateManager.clearDirectoryCache(StateManager.currentRepo, '');
         }
+        
         // 清除仓库列表缓存
         StateManager.clearDirectoryCache('repositories', '');
         
-        this.refreshAfterOperation(800);
+        // 清除搜索缓存
+        StateManager.searchResultCache = null;
+        
+        // 清除 Pages 状态缓存
+        StateManager.pagesEnabledMap.clear();
+        
+        console.log('缓存清理完成');
+    },
+    
+    // 刷新并清除缓存
+    refreshWithCacheClear() {
+        this.clearAllRelatedCaches();
+        this.refreshAfterOperation(500, false);
+    },
+    
+    // 特定操作后的刷新策略
+    refreshAfterFileOperation() {
+        this.clearAllRelatedCaches();
+        this.refreshAfterOperation(1000, false);
+    },
+    
+    refreshAfterRepoOperation() {
+        this.clearAllRelatedCaches();
+        // 仓库操作需要更长时间等待GitHub处理
+        this.refreshAfterOperation(1500, false);
     }
 };
 
@@ -4802,7 +4966,7 @@ const NavigationManager = {
 
 // ==================== 编辑器管理模块 ====================
 const EditorManager = {
-    // 初始化编辑器
+    // 初始化编辑器（保持不变）
     async init() {
         if (StateManager.monacoInitialized) return Promise.resolve();
         if (StateManager.monacoLoadPromise) return StateManager.monacoLoadPromise;
@@ -4888,240 +5052,418 @@ const EditorManager = {
 
     // 创建备用编辑器
     createFallbackEditor() {
-        document.getElementById('editor').innerHTML = `
-            <textarea id="fallback-editor" style="width:100%;height:100%;font-family:monospace;padding:10px;"></textarea>
-        `;
+        const editorContainer = document.getElementById('editor');
+        if (editorContainer) {
+            editorContainer.innerHTML = `
+                <textarea id="fallback-editor" style="width:100%;height:100%;font-family:monospace;padding:10px;border:none;outline:none;resize:none;"></textarea>
+            `;
+        }
+        console.log('创建了备用编辑器');
     },
 
-    // 在编辑器中打开文件 
-async openFileInEditor(fileInfo) {
-    if (fileInfo.size > 1024 * 1024) {
-        ToastManager.show('文件过大，请在浏览器中查看');
-        return;
-    }
-    
-    const fileExt = fileInfo.name.split('.').pop().toLowerCase();
-    if (!Config.textFileExtensions.includes(fileExt)) {
-        ToastManager.show('不支持编辑此文件类型');
-        return;
-    }
-    
-    try {
-        ToastManager.show('正在加载文件内容...');
+    // 在编辑器中打开文件 - 修复显示问题
+    async openFileInEditor(fileInfo) {
+        if (fileInfo.size > 1024 * 1024) {
+            ToastManager.show('文件过大，请在浏览器中查看');
+            return;
+        }
         
-        // 创建新的编辑文件对象
-        StateManager.currentEditingFile = {
-            ...fileInfo,
-            path: StateManager.currentPath ? `${StateManager.currentPath}/${fileInfo.name}` : fileInfo.name
-        };
+        const fileExt = fileInfo.name.split('.').pop().toLowerCase();
+        if (!Config.textFileExtensions.includes(fileExt)) {
+            ToastManager.show('不支持编辑此文件类型');
+            return;
+        }
         
-        // 获取文件内容和SHA
-        const fileContent = await this.getFileContentForEditor(StateManager.currentEditingFile.path);
-        
-        StateManager.currentEditingFile.sha = fileContent.sha;
-        StateManager.currentEditingFile.content = fileContent.content;
-        
-        // 初始化编辑器并设置内容
-        await this.init();
-        this.setEditorContent(fileContent.content, fileExt);
-        
-    } catch (error) {
-        console.error('打开编辑器失败:', error);
-        ToastManager.show('加载文件失败: ' + error.message);
-        StateManager.currentEditingFile = null;
-    }
-},
+        try {
+            ToastManager.show('正在加载文件内容...');
+            
+            // 创建新的编辑文件对象
+            StateManager.currentEditingFile = {
+                ...fileInfo,
+                path: StateManager.currentPath ? `${StateManager.currentPath}/${fileInfo.name}` : fileInfo.name
+            };
+            
+            // 获取文件内容和SHA
+            const fileContent = await this.getFileContentForEditor(StateManager.currentEditingFile.path);
+            
+            StateManager.currentEditingFile.sha = fileContent.sha;
+            StateManager.currentEditingFile.content = fileContent.content;
+            
+            // 初始化编辑器并设置内容
+            await this.init();
+            this.setEditorContent(fileContent.content, fileExt);
+            
+            ToastManager.show('文件加载完成');
+            
+        } catch (error) {
+            console.error('打开编辑器失败:', error);
+            ToastManager.show('加载文件失败: ' + error.message);
+            StateManager.currentEditingFile = null;
+        }
+    },
 
-// 获取文件内容用于编辑器
-async getFileContentForEditor(filePath) {
-    try {
-        const response = await fetch(
-            `https://api.github.com/repos/${StateManager.currentRepo}/contents/${encodeURIComponent(filePath)}`,
-            {
-                headers: {
-                    'Authorization': `token ${StateManager.githubToken}`,
-                    'Accept': 'application/vnd.github.v3+json'
+    // 获取文件内容用于编辑器
+    async getFileContentForEditor(filePath) {
+        try {
+            console.log('获取文件内容:', filePath);
+            
+            const response = await fetch(
+                `https://api.github.com/repos/${StateManager.currentRepo}/contents/${encodeURIComponent(filePath)}`,
+                {
+                    headers: {
+                        'Authorization': `token ${StateManager.githubToken}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                }
+            );
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || '获取文件内容失败');
+            }
+            
+            const data = await response.json();
+            console.log('获取到文件数据:', data);
+            
+            // 使用改进的Base64解码方法
+            let decodedContent;
+            try {
+                decodedContent = this.decodeBase64ContentSafe(data.content);
+            } catch (decodeError) {
+                console.error('Base64解码失败:', decodeError);
+                // 尝试备用解码方法
+                decodedContent = this.fallbackDecodeBase64(data.content);
+            }
+            
+            return {
+                content: decodedContent,
+                sha: data.sha
+            };
+        } catch (error) {
+            console.error('获取文件内容错误:', error);
+            throw error;
+        }
+    },
+
+    // 安全的Base64解码方法
+    decodeBase64ContentSafe(base64) {
+        try {
+            // 方法1: 使用标准的atob
+            const binaryString = atob(base64);
+            
+            // 方法2: 处理UTF-8字符
+            try {
+                // 使用TextDecoder处理UTF-8
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                return new TextDecoder('utf-8').decode(bytes);
+            } catch (e) {
+                // 如果UTF-8解码失败，尝试escape/unescape方法
+                try {
+                    return decodeURIComponent(escape(binaryString));
+                } catch (e2) {
+                    // 最后返回原始二进制字符串
+                    console.warn('使用原始二进制字符串作为内容');
+                    return binaryString;
                 }
             }
-        );
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || '获取文件内容失败');
+        } catch (error) {
+            console.error('Base64解码错误:', error);
+            throw new Error('文件内容解码失败');
         }
-        
-        const data = await response.json();
-        
-        // 解码base64内容
-        let decodedContent;
-        try {
-            decodedContent = this.decodeBase64Content(data.content);
-        } catch (decodeError) {
-            console.error('Base64解码失败:', decodeError);
-            // 尝试备用解码方法
-            decodedContent = atob(data.content);
-        }
-        
-        return {
-            content: decodedContent,
-            sha: data.sha
-        };
-    } catch (error) {
-        console.error('获取文件内容错误:', error);
-        throw error;
-    }
-},
+    },
 
-// 解码Base64内容
-decodeBase64Content(base64) {
-    try {
-        // 方法1: 直接atob
-        const binaryString = atob(base64);
-        
-        // 方法2: 处理UTF-8字符
+    // 备用Base64解码方法
+    fallbackDecodeBase64(base64) {
         try {
-            return decodeURIComponent(escape(binaryString));
+            // 直接使用atob
+            return atob(base64);
         } catch (e) {
-            // 如果UTF-8解码失败，返回原始二进制字符串
-            return binaryString;
+            // 如果所有方法都失败，返回空字符串
+            console.error('所有Base64解码方法都失败');
+            return '';
         }
-    } catch (error) {
-        console.error('Base64解码错误:', error);
-        throw new Error('文件内容解码失败');
-    }
-},
-    // 设置编辑器内容
+    },
+
+    // 设置编辑器内容 - 修复显示问题
     setEditorContent(content, fileExt) {
+        console.log('设置编辑器内容，文件类型:', fileExt);
+        
+        // 首先确保编辑器容器可见
+        this.showEditorContainer();
+        
+        // 设置内容到编辑器
         if (StateManager.editor && StateManager.editor.setValue) {
-            StateManager.editor.setValue(content);
+            console.log('使用Monaco编辑器设置内容');
+            StateManager.editor.setValue(content || '');
             
             const language = Config.languageMapping[fileExt] || 'text';
+            console.log('设置编辑器语言:', language);
             monaco.editor.setModelLanguage(StateManager.editor.getModel(), language);
+            
+            // 强制重新布局
+            setTimeout(() => {
+                if (StateManager.editor && StateManager.editor.layout) {
+                    StateManager.editor.layout();
+                }
+            }, 100);
+            
         } else if (document.getElementById('fallback-editor')) {
-            document.getElementById('fallback-editor').value = content;
+            console.log('使用备用编辑器设置内容');
+            document.getElementById('fallback-editor').value = content || '';
+        } else {
+            console.error('没有找到可用的编辑器');
+            this.createFallbackEditor();
+            if (document.getElementById('fallback-editor')) {
+                document.getElementById('fallback-editor').value = content || '';
+            }
         }
         
+        // 更新文件信息显示
+        this.updateFileInfoDisplay(fileExt);
+        
+        // 聚焦编辑器
+        this.focusEditor();
+    },
+
+    // 显示编辑器容器
+    showEditorContainer() {
+        const editorContainer = DOMManager.elements.editorContainer;
+        if (!editorContainer) {
+            console.error('编辑器容器元素未找到');
+            return;
+        }
+        
+        console.log('显示编辑器容器');
+        
+        // 使用DOMManager的方法显示容器
+        DOMManager.show(editorContainer);
+        
+        // 确保容器有正确的样式
+        editorContainer.style.display = 'flex';
+        editorContainer.style.flexDirection = 'column';
+        editorContainer.style.position = 'fixed';
+        editorContainer.style.top = '0';
+        editorContainer.style.left = '0';
+        editorContainer.style.right = '0';
+        editorContainer.style.bottom = '0';
+        editorContainer.style.zIndex = '1000';
+        editorContainer.style.background = 'white';
+        
+        // 隐藏主界面内容
+        const mainScreen = DOMManager.elements.mainScreen;
+        if (mainScreen) {
+            mainScreen.style.display = 'none';
+        }
+        
+        // 添加ESC键关闭支持
+        this.bindEscapeKey();
+    },
+
+    // 更新文件信息显示
+    updateFileInfoDisplay(fileExt) {
         const { editorFilename, editorFileSize, editorLanguage } = DOMManager.elements;
-        editorFilename.textContent = StateManager.currentEditingFile.name;
-        editorFileSize.textContent = FileManager.formatFileSize(StateManager.currentEditingFile.size);
-        editorLanguage.textContent = (Config.languageMapping[fileExt] || 'text').toUpperCase();
         
-        DOMManager.show(DOMManager.elements.editorContainer);
+        if (editorFilename && StateManager.currentEditingFile) {
+            editorFilename.textContent = StateManager.currentEditingFile.name;
+        }
         
+        if (editorFileSize && StateManager.currentEditingFile) {
+            editorFileSize.textContent = FileManager.formatFileSize(StateManager.currentEditingFile.size);
+        }
+        
+        if (editorLanguage) {
+            editorLanguage.textContent = (Config.languageMapping[fileExt] || 'text').toUpperCase();
+        }
+    },
+
+    // 聚焦编辑器
+    focusEditor() {
         setTimeout(() => {
             if (StateManager.editor && StateManager.editor.focus) {
                 StateManager.editor.focus();
+                console.log('Monaco编辑器已聚焦');
             } else if (document.getElementById('fallback-editor')) {
                 document.getElementById('fallback-editor').focus();
+                console.log('备用编辑器已聚焦');
             }
-        }, 100);
+        }, 200);
     },
 
-   // 保存文件更改 
-async saveFileChanges() {
-    if (!StateManager.currentEditingFile) {
-        ToastManager.show('没有可保存的文件');
-        return;
-    }
-    
-    try {
-        let newContent;
-        if (StateManager.editor && StateManager.editor.getValue) {
-            newContent = StateManager.editor.getValue();
-        } else if (document.getElementById('fallback-editor')) {
-            newContent = document.getElementById('fallback-editor').value;
-        } else {
-            throw new Error('编辑器未初始化');
-        }
-        
-        ToastManager.show('正在保存文件...');
-        
-        // 获取文件当前SHA
-        const fileInfo = await this.getFileInfoForSave(StateManager.currentEditingFile.path);
-        
-        if (!fileInfo.sha) {
-            throw new Error('无法获取文件SHA，保存失败');
-        }
-        
-        // 执行保存
-        await this.saveFileContent(
-            StateManager.currentEditingFile.path,
-            newContent,
-            fileInfo.sha,
-            `更新 ${StateManager.currentEditingFile.name}`
-        );
-        
-        ToastManager.show('文件保存成功');
-        this.closeEditor();
-        // 保存文件后刷新当前目录
-        AutoRefreshManager.refreshAfterOperation();
-        
-    } catch (error) {
-        console.error('保存文件失败:', error);
-        ToastManager.show('保存失败: ' + error.message);
-    }
-},
-
-// 获取文件信息用于保存
-async getFileInfoForSave(filePath) {
-    try {
-        const response = await fetch(
-            `https://api.github.com/repos/${StateManager.currentRepo}/contents/${encodeURIComponent(filePath)}`,
-            {
-                headers: {
-                    'Authorization': `token ${StateManager.githubToken}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
+    // 绑定ESC键关闭
+    bindEscapeKey() {
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape' && StateManager.currentEditingFile) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.closeEditor();
+                document.removeEventListener('keydown', escapeHandler);
             }
-        );
+        };
         
-        if (response.ok) {
-            const data = await response.json();
-            return { sha: data.sha, exists: true };
-        } else {
-            const errorData = await response.json();
-            throw new Error(errorData.message || '获取文件信息失败');
+        document.addEventListener('keydown', escapeHandler);
+        
+        // 保存引用以便清理
+        StateManager.editorEscapeHandler = escapeHandler;
+    },
+
+    // 保存文件更改
+    async saveFileChanges() {
+        if (!StateManager.currentEditingFile) {
+            ToastManager.show('没有可保存的文件');
+            return;
         }
-    } catch (error) {
-        console.error('获取文件信息错误:', error);
-        throw error;
-    }
-},
-
-// 保存文件内容
-async saveFileContent(filePath, content, sha, message) {
-    // 将内容编码为Base64
-    const base64Content = btoa(unescape(encodeURIComponent(content)));
-    
-    const response = await fetch(
-        `https://api.github.com/repos/${StateManager.currentRepo}/contents/${encodeURIComponent(filePath)}`,
-        {
-            method: 'PUT',
-            headers: {
-                'Authorization': `token ${StateManager.githubToken}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message: message,
-                content: base64Content,
-                sha: sha
-            })
+        
+        try {
+            let newContent;
+            if (StateManager.editor && StateManager.editor.getValue) {
+                newContent = StateManager.editor.getValue();
+            } else if (document.getElementById('fallback-editor')) {
+                newContent = document.getElementById('fallback-editor').value;
+            } else {
+                throw new Error('编辑器未初始化');
+            }
+            
+            ToastManager.show('正在保存文件...');
+            
+            // 获取文件当前SHA
+            const fileInfo = await this.getFileInfoForSave(StateManager.currentEditingFile.path);
+            
+            if (!fileInfo.sha) {
+                throw new Error('无法获取文件SHA，保存失败');
+            }
+            
+            // 执行保存
+            await this.saveFileContent(
+                StateManager.currentEditingFile.path,
+                newContent,
+                fileInfo.sha,
+                `更新 ${StateManager.currentEditingFile.name}`
+            );
+            
+            ToastManager.show('文件保存成功');
+this.closeEditor();
+// 保存文件后刷新当前目录
+AutoRefreshManager.refreshAfterFileOperation(); 
+            
+        } catch (error) {
+            console.error('保存文件失败:', error);
+            ToastManager.show('保存失败: ' + error.message);
         }
-    );
+    },
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `保存失败: ${response.status}`);
-    }
+    // 获取文件信息用于保存
+    async getFileInfoForSave(filePath) {
+        try {
+            const response = await fetch(
+                `https://api.github.com/repos/${StateManager.currentRepo}/contents/${encodeURIComponent(filePath)}`,
+                {
+                    headers: {
+                        'Authorization': `token ${StateManager.githubToken}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                }
+            );
+            
+            if (response.ok) {
+                const data = await response.json();
+                return { sha: data.sha, exists: true };
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.message || '获取文件信息失败');
+            }
+        } catch (error) {
+            console.error('获取文件信息错误:', error);
+            throw error;
+        }
+    },
 
-    return response.json();
-},
+    // 保存文件内容
+    async saveFileContent(filePath, content, sha, message) {
+        try {
+            // 将内容编码为Base64 - 使用更安全的方法
+            const base64Content = this.encodeToBase64Safe(content);
+            
+            const response = await fetch(
+                `https://api.github.com/repos/${StateManager.currentRepo}/contents/${encodeURIComponent(filePath)}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${StateManager.githubToken}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        content: base64Content,
+                        sha: sha
+                    })
+                }
+            );
 
-    // 关闭编辑器
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `保存失败: ${response.status}`);
+            }
+
+            return response.json();
+        } catch (error) {
+            console.error('保存文件内容错误:', error);
+            throw error;
+        }
+    },
+
+    // 安全的Base64编码方法
+    encodeToBase64Safe(content) {
+        try {
+            // 方法1: 使用标准的btoa和escape/unescape处理中文
+            return btoa(unescape(encodeURIComponent(content)));
+        } catch (e) {
+            // 方法2: 使用TextEncoder
+            try {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(content);
+                let binary = '';
+                for (let i = 0; i < data.length; i++) {
+                    binary += String.fromCharCode(data[i]);
+                }
+                return btoa(binary);
+            } catch (e2) {
+                // 方法3: 直接使用btoa（可能对中文不友好）
+                console.warn('使用直接btoa编码，可能丢失中文');
+                return btoa(content);
+            }
+        }
+    },
+
+    // 关闭编辑器 - 修复版本
     closeEditor() {
-        DOMManager.hide(DOMManager.elements.editorContainer);
+        console.log('关闭编辑器');
+        
+        const editorContainer = DOMManager.elements.editorContainer;
+        if (editorContainer) {
+            // 隐藏编辑器容器
+            DOMManager.hide(editorContainer);
+            editorContainer.style.display = 'none';
+        }
+        
+        // 显示主界面
+        const mainScreen = DOMManager.elements.mainScreen;
+        if (mainScreen) {
+            mainScreen.style.display = 'block';
+        }
+        
+        // 清理ESC键事件监听器
+        if (StateManager.editorEscapeHandler) {
+            document.removeEventListener('keydown', StateManager.editorEscapeHandler);
+            StateManager.editorEscapeHandler = null;
+        }
+        
         StateManager.currentEditingFile = null;
+        
+        console.log('编辑器已关闭');
     },
 
     // 移动端键盘处理
@@ -5237,49 +5579,72 @@ const SelectionManager = {
         }
     },
 
-    // 下载选中的文件
-    async downloadSelectedFiles() {
-        if (StateManager.selectedFiles.size === 0) {
-            ToastManager.show('请先选择文件');
-            return;
+    // 下载选中的文件 - 修复版本
+async downloadSelectedFiles() {
+    if (StateManager.selectedFiles.size === 0) {
+        ToastManager.show('请先选择文件');
+        return;
+    }
+
+    // 单个文件直接下载
+    if (StateManager.selectedFiles.size === 1) {
+        const file = Array.from(StateManager.selectedFiles)[0];
+        await FileManager.downloadFile(file);
+        this.exitSelectMode();
+        return;
+    }
+
+    // 多个文件打包下载
+    try {
+        const files = Array.from(StateManager.selectedFiles);
+        ToastManager.show(`开始打包 ${files.length} 个文件...`);
+        
+        // 检查是否支持JSZip
+        if (typeof JSZip === 'undefined') {
+            throw new Error('打包功能需要JSZip库支持');
         }
+        
+        const zip = new JSZip();
+        let successCount = 0;
+        let errorCount = 0;
 
-        // 单个文件直接下载
-        if (StateManager.selectedFiles.size === 1) {
-            const file = Array.from(StateManager.selectedFiles)[0];
-            await FileManager.downloadFile(file);
-            this.exitSelectMode();
-            return;
-        }
+        // 创建进度提示
+        const progressToast = ToastManager.createProgressToast(`准备打包 ${files.length} 个文件...`);
 
-        // 多个文件打包下载
-        try {
-            ToastManager.show(`开始打包 ${StateManager.selectedFiles.size} 个文件...`);
-            const zip = new JSZip();
-            let count = 0;
-            let errors = 0;
-
-            // 创建进度提示
-            const progressToast = ToastManager.createProgressToast(`打包中: 0/${StateManager.selectedFiles.size} 个文件`);
-
-            // 下载所有选中的文件
-            const downloadPromises = Array.from(StateManager.selectedFiles).map(async file => {
+        // 分批下载避免内存溢出
+        const BATCH_SIZE = 5;
+        
+        for (let i = 0; i < files.length; i += BATCH_SIZE) {
+            const batch = files.slice(i, i + BATCH_SIZE);
+            const batchPromises = batch.map(async (file, index) => {
                 if (file.type !== 'file' || !file.download_url) {
-                    errors++;
-                    return;
+                    errorCount++;
+                    return null;
                 }
                 
                 try {
-                    const response = await fetch(file.download_url);
+                    progressToast.textContent = `下载中: ${i + index + 1}/${files.length} - ${file.name}`;
                     
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const response = await fetch(file.download_url, {
+                        headers: {
+                            'Accept': '*/*',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
                     
                     const blob = await response.blob();
+                    
+                    if (!blob || blob.size === 0) {
+                        throw new Error('文件内容为空');
+                    }
                     
                     // 构建文件路径，保持目录结构
                     let filePath = file.name;
                     if (file.path && file.path.includes('/')) {
-                        // 如果文件有路径信息，保持路径结构
                         const pathParts = file.path.split('/');
                         pathParts.pop(); // 移除文件名
                         if (pathParts.length > 0) {
@@ -5288,58 +5653,77 @@ const SelectionManager = {
                     }
                     
                     zip.file(filePath, blob);
-                    count++;
-                    progressToast.textContent = `打包中: ${count}/${StateManager.selectedFiles.size} 个文件 (${errors} 失败)`;
+                    successCount++;
+                    
+                    return file.name;
+                    
                 } catch (error) {
                     console.error(`下载 ${file.name} 失败:`, error);
-                    errors++;
-                    progressToast.textContent = `打包中: ${count}/${StateManager.selectedFiles.size} 个文件 (${errors} 失败)`;
+                    errorCount++;
+                    progressToast.textContent = `下载中: ${i + index + 1}/${files.length} (${errorCount} 失败)`;
+                    return null;
                 }
             });
 
-            // 等待所有下载完成
-            await Promise.all(downloadPromises);
+            // 等待当前批次完成
+            await Promise.all(batchPromises);
             
-            if (count === 0) {
-                ToastManager.show('没有文件可以下载');
-                return;
+            // 小延迟避免速率限制
+            if (i + BATCH_SIZE < files.length) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
-            
-            // 生成ZIP文件
-            const repoName = StateManager.currentRepo.split('/')[1] || 'download';
-            const dateString = new Date().toISOString().slice(0,10);
-            const zipFilename = `${repoName}-selected-files-${dateString}.zip`;
-            
-            const content = await zip.generateAsync({ type: 'blob' });
-            
-            // 创建下载链接
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(content);
-            link.download = zipFilename;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            
-            // 清理
-            setTimeout(() => {
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-            }, 100);
-            
-            ToastManager.removeProgressToast();
-            
-            if (errors === 0) {
-                ToastManager.show(`已成功打包下载 ${count} 个文件`);
-            } else {
-                ToastManager.show(`打包完成: ${count} 成功, ${errors} 失败`);
-            }
-        } catch (error) {
-            console.error('打包下载失败:', error);
-            ToastManager.show('打包下载失败: ' + error.message);
-        } finally {
-            this.exitSelectMode();
         }
-    },
+
+        if (successCount === 0) {
+            ToastManager.show('没有文件成功下载');
+            ToastManager.removeProgressToast();
+            return;
+        }
+        
+        // 生成ZIP文件
+        progressToast.textContent = '正在生成压缩文件...';
+        
+        const content = await zip.generateAsync({
+            type: 'blob',
+            compression: 'DEFLATE',
+            compressionOptions: { level: 6 }
+        });
+        
+        // 触发下载
+        const repoName = StateManager.currentRepo.split('/')[1] || 'download';
+        const dateString = new Date().toISOString().slice(0, 10);
+        const zipFilename = `${repoName}-files-${dateString}.zip`;
+        
+        const url = URL.createObjectURL(content);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = zipFilename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        
+        // 清理
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 100);
+        
+        ToastManager.removeProgressToast();
+        
+        if (errorCount === 0) {
+            ToastManager.show(`成功打包下载 ${successCount} 个文件`);
+        } else {
+            ToastManager.show(`打包完成: ${successCount} 成功, ${errorCount} 失败`);
+        }
+        
+    } catch (error) {
+        console.error('打包下载失败:', error);
+        ToastManager.removeProgressToast();
+        ToastManager.show('打包下载失败: ' + error.message);
+    } finally {
+        this.exitSelectMode();
+    }
+},
 
     // 删除选中的文件
     async deleteSelectedFiles() {
@@ -5922,9 +6306,8 @@ const ContextMenuManager = {
                 throw new Error(errorData.message || `删除原文件失败: ${deleteResponse.status}`);
             }
             ToastManager.show('文件重命名成功');
-            
-            // 重命名文件后刷新当前目录
-            AutoRefreshManager.refreshAfterOperation(1000);
+// 重命名文件后刷新当前目录
+AutoRefreshManager.refreshAfterFileOperation();
             
         } catch (error) {
             console.error('重命名文件错误:', error);
@@ -7194,21 +7577,21 @@ const App = {
     },
 
     // 处理确认对话框的确认操作
-    async handleConfirmYes() {
-        if (StateManager.fileToDelete) {
-            if (Array.isArray(StateManager.fileToDelete)) {
-                await this.deleteFiles(StateManager.fileToDelete);
-                AutoRefreshManager.refreshAfterOperation();
-            } else if (StateManager.fileToDelete.type === 'repo') {
-                await this.deleteRepository(StateManager.fileToDelete);
-                AutoRefreshManager.refreshWithCacheClear();
-            } else {
-                await this.deleteFile(StateManager.fileToDelete);
-                AutoRefreshManager.refreshAfterOperation();
-            }
+async handleConfirmYes() {
+    if (StateManager.fileToDelete) {
+        if (Array.isArray(StateManager.fileToDelete)) {
+            await this.deleteFiles(StateManager.fileToDelete);
+            AutoRefreshManager.refreshAfterFileOperation(); // 改为增强版
+        } else if (StateManager.fileToDelete.type === 'repo') {
+            await this.deleteRepository(StateManager.fileToDelete);
+            AutoRefreshManager.refreshAfterRepoOperation(); // 改为增强版
+        } else {
+            await this.deleteFile(StateManager.fileToDelete);
+            AutoRefreshManager.refreshAfterFileOperation(); // 改为增强版
         }
-        DialogManager.hideConfirmDialog();
-    },
+    }
+    DialogManager.hideConfirmDialog();
+},
 
     // 删除文件或文件夹
     async deleteFile(fileInfo) {
@@ -7519,7 +7902,7 @@ const App = {
             ToastManager.show(`文件夹 "${folderName}" 创建成功`);
             
             // 创建文件夹后刷新当前目录
-            AutoRefreshManager.refreshAfterOperation();
+            AutoRefreshManager.refreshAfterFileOperation();
             
         } catch (error) {
             console.error('创建文件夹错误:', error);
@@ -7547,8 +7930,9 @@ const App = {
             const result = await APIService.createRepository(name, description, isPrivate);
             
             ToastManager.show(`仓库 "${name}" 创建成功`);
-            StateManager.clearDirectoryCache('repositories', ''); // 清除仓库列表缓存
-            NavigationManager.loadRepositories(); // 刷新仓库列表
+StateManager.clearDirectoryCache('repositories', '');
+// 新建仓库后刷新仓库列表
+AutoRefreshManager.refreshAfterRepoOperation(); 
             
             return result;
         } catch (error) {
@@ -7656,8 +8040,8 @@ const App = {
                 ToastManager.show(`上传完成: ${successfulUploads} 成功, ${failedUploads} 失败`);
             }
             
-            // 上传文件后刷新当前目录
-            AutoRefreshManager.refreshAfterOperation();
+            // 上传文件后刷新当前目录           
+AutoRefreshManager.refreshAfterFileOperation();
         } catch (error) {
             console.error('上传过程中发生错误:', error);
             ToastManager.show('上传过程中发生错误: ' + error.message);
@@ -7665,7 +8049,6 @@ const App = {
             DOMManager.elements.fileInput.value = '';
         }
     },
-
     // 上传单个文件
     async uploadSingleFile(file) {
         try {
@@ -7788,17 +8171,17 @@ const App = {
             StateManager.pagesEnabledMap.set(targetRepo, true);
             
             ToastManager.show(`网站已部署: ${targetRepo}`);
-            DialogManager.hideStaticSiteDialog();
-            
-            // 启用Pages后刷新当前视图
-            AutoRefreshManager.refreshAfterOperation();
-            
-            // 更新菜单按钮状态
-            if (StateManager.contextMenuTarget) {
-                setTimeout(() => {
-                    ContextMenuManager.updatePagesMenuButton(StateManager.contextMenuTarget);
-                }, 1000);
-            }
+DialogManager.hideStaticSiteDialog();
+
+// 启用Pages后刷新当前视图
+AutoRefreshManager.refreshAfterFileOperation();
+
+// 更新菜单按钮状态
+if (StateManager.contextMenuTarget) {
+    setTimeout(() => {
+        ContextMenuManager.updatePagesMenuButton(StateManager.contextMenuTarget);
+    }, 1000);
+}
             
             // 清除上下文菜单目标
             StateManager.contextMenuTarget = null;
