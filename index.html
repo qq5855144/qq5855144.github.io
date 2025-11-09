@@ -1456,33 +1456,6 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-}
-
-.file-info-main {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 2px;
-}
-
-.file-name {
-    font-weight: 600;
-    font-size: 16px;
-    color: var(--text-primary);
-}
-
-.file-meta {
-    font-size: 13px;
-    color: var(--text-secondary);
-    line-height: 1.3;
-}
-
-/* 列表项布局样式 */
-.file-info-container {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
     padding: 2px 0;
     align-items: flex-start;
 }
@@ -1528,8 +1501,7 @@
     text-align: left;
     display: flex;
     align-items: center;
-    gap: 12px;
-    justify-content: flex-start;
+    justify-content: space-between;
 }
 
 .repo-tags {
@@ -1567,7 +1539,7 @@
     font-size: 9px;
     color: #6b7280;
     white-space: nowrap;
-    text-align: left;
+    text-align: right;
 }
 
 .file-item {
@@ -1599,7 +1571,6 @@
     
     .file-stats {
         font-size: 9px;
-        gap: 8px;
     }
     
     .repo-tag {
@@ -1617,10 +1588,9 @@
     
     .file-stats {
         flex-direction: row;
-        gap: 6px;
         align-items: center;
-        justify-content: flex-start;
-        flex-wrap: wrap;
+        justify-content: space-between;
+        flex-wrap: nowrap;
     }
     
     .stats {
@@ -3865,131 +3835,120 @@ const FileManager = {
     },
     
     // 创建文件信息（修改后的紧凑版本）
-    createFileInfo(item) {
-        const infoContainer = document.createElement('div');
-        infoContainer.className = 'file-info-container';
+    
+createFileInfo(item) {
+    const infoContainer = document.createElement('div');
+    infoContainer.className = 'file-info-container';
+    
+    if (item.type === 'repo') {
+        // 仓库类型：使用统一的紧凑布局
+        const firstLine = document.createElement('div');
+        firstLine.className = 'file-info-first-line';
         
-        if (item.type === 'repo') {
-            // 仓库类型：使用新的紧凑布局
-            
-            // 第一行：仓库名称 + 标签
-           const firstLine = document.createElement('div');
-    firstLine.className = 'file-info-first-line';
-    
-    // 仓库名称
-    const name = document.createElement('div');
-    name.className = 'file-name';
-    name.textContent = item.name;
-    firstLine.appendChild(name);
-    
-    // 标签容器
-    const tagsContainer = document.createElement('div');
-    tagsContainer.className = 'repo-tags';
-    
-    // 网站部署标签
-    if (item.pagesEnabled) {
-        const siteTag = document.createElement('span');
-        siteTag.className = 'repo-tag tag-site';
-        siteTag.textContent = '网站';
-        tagsContainer.appendChild(siteTag);
-    }
-    
-    // 版本发布标签
-    if (item.hasReleases) {
-        const releaseTag = document.createElement('span');
-        releaseTag.className = 'repo-tag tag-release';
-        releaseTag.textContent = '包';
-        tagsContainer.appendChild(releaseTag);
-    }
-    
-    firstLine.appendChild(tagsContainer);
-    
-    // 第二行：仓库类型 + 描述
-    const secondLine = document.createElement('div');
-    secondLine.className = 'file-meta';
-    
-    let secondLineText = item.private ? '私有仓库' : '公开仓库';
-    if (item.description) {
-        secondLineText += ' • ' + item.description;
-    }
-    secondLine.textContent = secondLineText;
-    
-    // 第三行：统计信息 + 更新时间
-    const thirdLine = document.createElement('div');
-    thirdLine.className = 'file-stats flex justify-between items-center';
-    
-    const statsContainer = document.createElement('div');
-    statsContainer.className = 'stats';
-    
-    // 星标数
-    if (item.stars !== undefined) {
-        const starStat = document.createElement('span');
-        starStat.className = 'star-stat';
-        starStat.innerHTML = `<i class="fas fa-star text-yellow-500 text-xs"></i>${item.stars}`;
-        statsContainer.appendChild(starStat);
-    }
-    
-    // 复刻数
-    if (item.forks !== undefined) {
-        const forkStat = document.createElement('span');
-        forkStat.className = 'fork-stat';
-        forkStat.innerHTML = `<i class="fas fa-code-branch text-purple-500 text-xs"></i>${item.forks}`;
-        statsContainer.appendChild(forkStat);
-    }
-    
-    // 更新时间
-    const updateTime = document.createElement('div');
-    updateTime.className = 'update-time';
-    if (item.updatedAt) {
-        updateTime.textContent = this.formatRelativeTime(item.updatedAt);
-    }
-    
-    thirdLine.appendChild(statsContainer);
-    thirdLine.appendChild(updateTime);
-    
-    // 组装所有行
-    infoContainer.appendChild(firstLine);
-    infoContainer.appendChild(secondLine);
-    infoContainer.appendChild(thirdLine);
-            
-        } else if (item.type === 'file') {
-            // 文件类型：保持原有布局
-            const mainInfo = document.createElement('div');
-            mainInfo.className = 'file-info-main flex items-center gap-2 mb-1';
-            
-            const name = document.createElement('div');
-            name.className = 'file-name text-sm font-semibold truncate';
-            name.textContent = item.name;
-            mainInfo.appendChild(name);
-            
-            const meta = document.createElement('div');
-            meta.className = 'file-meta text-xs text-gray-600';
-            meta.textContent = this.formatFileSize(item.size);
-            
-            infoContainer.appendChild(mainInfo);
-            infoContainer.appendChild(meta);
-            
-        } else {
-            // 文件夹类型：保持原有布局
-            const mainInfo = document.createElement('div');
-            mainInfo.className = 'file-info-main flex items-center gap-2 mb-1';
-            
-            const name = document.createElement('div');
-            name.className = 'file-name text-sm font-semibold truncate';
-            name.textContent = item.name;
-            mainInfo.appendChild(name);
-            
-            const meta = document.createElement('div');
-            meta.className = 'file-meta text-xs text-gray-600';
-            meta.textContent = '文件夹 • 点击进入';
-            
-            infoContainer.appendChild(mainInfo);
-            infoContainer.appendChild(meta);
+        const name = document.createElement('div');
+        name.className = 'file-name';
+        name.textContent = item.name;
+        firstLine.appendChild(name);
+        
+        const tagsContainer = document.createElement('div');
+        tagsContainer.className = 'repo-tags';
+        
+        if (item.pagesEnabled) {
+            const siteTag = document.createElement('span');
+            siteTag.className = 'repo-tag tag-site';
+            siteTag.textContent = '网站';
+            tagsContainer.appendChild(siteTag);
         }
         
-        return infoContainer;
-    },
+        if (item.hasReleases) {
+            const releaseTag = document.createElement('span');
+            releaseTag.className = 'repo-tag tag-release';
+            releaseTag.textContent = '包';
+            tagsContainer.appendChild(releaseTag);
+        }
+        
+        firstLine.appendChild(tagsContainer);
+        
+        const secondLine = document.createElement('div');
+        secondLine.className = 'file-meta';
+        
+        let secondLineText = item.private ? '私有仓库' : '公开仓库';
+        if (item.description) {
+            secondLineText += ' • ' + item.description;
+        }
+        secondLine.textContent = secondLineText;
+        
+        const thirdLine = document.createElement('div');
+        thirdLine.className = 'file-stats';
+        
+        const statsContainer = document.createElement('div');
+        statsContainer.className = 'stats';
+        
+        if (item.stars !== undefined) {
+            const starStat = document.createElement('span');
+            starStat.className = 'star-stat';
+            starStat.innerHTML = `<i class="fas fa-star text-yellow-500 text-xs"></i>${item.stars}`;
+            statsContainer.appendChild(starStat);
+        }
+        
+        if (item.forks !== undefined) {
+            const forkStat = document.createElement('span');
+            forkStat.className = 'fork-stat';
+            forkStat.innerHTML = `<i class="fas fa-code-branch text-purple-500 text-xs"></i>${item.forks}`;
+            statsContainer.appendChild(forkStat);
+        }
+        
+        const updateTime = document.createElement('div');
+        updateTime.className = 'update-time';
+        if (item.updatedAt) {
+            updateTime.textContent = this.formatRelativeTime(item.updatedAt);
+        }
+        
+        thirdLine.appendChild(statsContainer);
+        thirdLine.appendChild(updateTime);
+        
+        infoContainer.appendChild(firstLine);
+        infoContainer.appendChild(secondLine);
+        infoContainer.appendChild(thirdLine);
+        
+    } else if (item.type === 'file') {
+        // 文件类型布局
+        const mainInfo = document.createElement('div');
+        mainInfo.className = 'file-info-main flex items-center gap-2 mb-1';
+        
+        const name = document.createElement('div');
+        name.className = 'file-name text-sm font-semibold truncate';
+        name.textContent = item.name;
+        mainInfo.appendChild(name);
+        
+        const meta = document.createElement('div');
+        meta.className = 'file-meta text-xs text-gray-600';
+        meta.textContent = this.formatFileSize(item.size);
+        
+        infoContainer.appendChild(mainInfo);
+        infoContainer.appendChild(meta);
+        
+    } else {
+        // 文件夹类型布局
+        const mainInfo = document.createElement('div');
+        mainInfo.className = 'file-info-main flex items-center gap-2 mb-1';
+        
+        const name = document.createElement('div');
+        name.className = 'file-name text-sm font-semibold truncate';
+        name.textContent = item.name;
+        mainInfo.appendChild(name);
+        
+        const meta = document.createElement('div');
+        meta.className = 'file-meta text-xs text-gray-600';
+        meta.textContent = '文件夹 • 点击进入';
+        
+        infoContainer.appendChild(mainInfo);
+        infoContainer.appendChild(meta);
+    }
     
+    return infoContainer;
+}
+,
     // 添加相对时间格式化方法
     formatRelativeTime(dateString) {
         const date = new Date(dateString);
