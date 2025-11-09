@@ -3094,26 +3094,41 @@ const APIService = {
         }
     },
     
-    // 搜索GitHub仓库（修改后的版本）
-    async searchRepositories(query) {
-        // 根据当前排序方式构建参数
-        const sortMap = {
-            'updated': 'updated',
-            'stars': 'stars',
-            'forks': 'forks',
-            'score': 'score'
-        };
-        const sort = sortMap[StateManager.getSearchSort()] || 'updated';
-        const order = sort === 'score' ? 'desc' : 'desc';
-        
-        const response = await this.request(
-            `${this.baseURL}/search/repositories?q=${encodeURIComponent(query)}&per_page=100&sort=${sort}&order=${order}`,
-            { method: 'GET' }
-        );
-        const data = await response.json();
-        
-        // 并行检查每个仓库的Pages状态和版本状态
-        const reposWithStatus = await Promise.all(
+    // 搜索GitHub仓库（支持分页）
+async searchRepositories(query, page = 1) {
+    const sortMap = {
+        'updated': 'updated',
+        'stars': 'stars',
+        'forks': 'forks',
+        'score': 'score'
+    };
+    const sort = sortMap[StateManager.getSearchSort()] || 'updated';
+    const order = sort === 'score' ? 'desc' : 'desc';
+    
+    const response = await this.request(
+        `${this.baseURL}/search/repositories?q=${encodeURIComponent(query)}&per_page=100&page=${page}&sort=${sort}&order=${order}`,
+        { method: 'GET' }
+    );
+    const data = await response.json();
+    
+    // 获取分页信息
+    const linkHeader = response.headers.get('Link');
+    let hasNextPage = false;
+    let nextPage = null;
+    
+    if (linkHeader) {
+        const links = linkHeader.split(',');
+        links.forEach(link => {
+            if (link.includes('rel="next"')) {
+                hasNextPage = true;
+                const match = link.match(/page=(\d+)/);
+                if (match) nextPage = parseInt(match[1]);
+            }
+        });
+    }
+    
+    // 并行检查每个仓库的Pages状态和版本状态
+    const reposWithStatus = await Promise.all(
         data.items.map(async repo => {
             try {
                 // 检查Pages状态
@@ -3132,30 +3147,35 @@ const APIService = {
                     updatedAt: repo.updated_at,
                     stars: repo.stargazers_count,
                     forks: repo.forks_count,
-                    pagesEnabled: pagesEnabled,  // 这个属性很重要
+                    pagesEnabled: pagesEnabled,
                     hasReleases: hasReleases
                 };
             } catch (error) {
                 console.error(`检查搜索结果仓库 ${repo.name} 状态失败:`, error);
                 return {
-                        name: repo.name,
-                        type: 'repo',
-                        path: `${repo.owner.login}/${repo.name}`,
-                        private: repo.private,
-                        description: repo.description,
-                        updatedAt: repo.updated_at,
-                        stars: repo.stargazers_count,
-                        forks: repo.forks_count,
-                        pagesEnabled: false,
-                        hasReleases: false,
-                        pagesEnabled: false
-                    };
-                }
-            })
-        );
-        
-        return reposWithStatus;
-    },
+                    name: repo.name,
+                    type: 'repo',
+                    path: `${repo.owner.login}/${repo.name}`,
+                    private: repo.private,
+                    description: repo.description,
+                    updatedAt: repo.updated_at,
+                    stars: repo.stargazers_count,
+                    forks: repo.forks_count,
+                    pagesEnabled: false,
+                    hasReleases: false
+                };
+            }
+        })
+    );
+    
+    return {
+        items: reposWithStatus,
+        totalCount: data.total_count,
+        hasNextPage: hasNextPage,
+        nextPage: nextPage,
+        currentPage: page
+    };
+},
     
     // 获取仓库发布版本
     async getRepositoryReleases(owner, repo) {
@@ -4536,8 +4556,8 @@ const NavigationManager = {
         }
     },
     
-    // 加载搜索结果 - 修复版本
-    async loadSearchResults(query) {
+    // 加载搜索结果 - 移除加载更多按钮
+    async loadSearchResults(query, page = 1) {
         DOMManager.showLoading();
         StateManager.setCurrentPath('');
         StateManager.setCurrentRepo('');
@@ -4552,30 +4572,93 @@ const NavigationManager = {
             isSearchRepo: StateManager.currentRepo ? true : false
         });
         
-        if (StateManager.searchResultCache && StateManager.searchResultCache.query === query) {
-            DOMManager.showFileList();
-            FileManager.renderFileList(StateManager.searchResultCache.results);
-            return;
-        }
-        
         try {
-            const results = await APIService.searchRepositories(query);
-            const formattedResults = results.map(repo => ({
-                ...repo,
-                type: 'repo',
-                isSearchResult: true
-            }));
+            const searchResult = await APIService.searchRepositories(query, page);
             
-            StateManager.searchResultCache = {
-                query,
-                results: formattedResults,
-                timestamp: Date.now()
-            };
+            let formattedResults;
+            if (page === 1) {
+                // 第一页，创建新的结果集
+                formattedResults = searchResult.items.map(repo => ({
+                    ...repo,
+                    type: 'repo',
+                    isSearchResult: true
+                }));
+                
+                StateManager.searchResultCache = {
+                    query,
+                    results: formattedResults,
+                    totalCount: searchResult.totalCount,
+                    hasNextPage: searchResult.hasNextPage,
+                    nextPage: searchResult.nextPage,
+                    currentPage: page,
+                    timestamp: Date.now()
+                };
+            } else {
+                // 后续页面，追加到现有结果
+                const newResults = searchResult.items.map(repo => ({
+                    ...repo,
+                    type: 'repo',
+                    isSearchResult: true
+                }));
+                
+                formattedResults = [...StateManager.searchResultCache.results, ...newResults];
+                
+                StateManager.searchResultCache.results = formattedResults;
+                StateManager.searchResultCache.hasNextPage = searchResult.hasNextPage;
+                StateManager.searchResultCache.nextPage = searchResult.nextPage;
+                StateManager.searchResultCache.currentPage = page;
+            }
+            
             StateManager.setCurrentFiles(formattedResults);
             FileManager.renderFileList(formattedResults);
+            
+            // 显示搜索统计信息
+            this.showSearchStats(searchResult.totalCount, formattedResults.length);
+            
         } catch (error) {
+            console.error('搜索失败:', error);
             ToastManager.show('搜索失败: ' + error.message);
             DOMManager.showEmptyState();
+        }
+    },
+
+    // 显示搜索统计信息
+    showSearchStats(totalCount, displayedCount) {
+        // 移除现有的统计信息
+        const existingStats = document.getElementById('search-stats');
+        if (existingStats) {
+            existingStats.remove();
+        }
+        
+        // 移除可能存在的加载更多按钮
+        const existingLoadMore = document.getElementById('load-more-results');
+        if (existingLoadMore) {
+            existingLoadMore.remove();
+        }
+        
+        if (totalCount > 0) {
+            const statsElement = document.createElement('div');
+            statsElement.id = 'search-stats';
+            statsElement.className = 'text-center text-sm text-gray-500 mt-4 p-3 glass rounded-lg';
+            
+            if (totalCount > displayedCount) {
+                statsElement.innerHTML = `
+                    <div>显示 <strong>${displayedCount}</strong> 个结果（共 <strong>${totalCount}</strong> 个）</div>
+                    <div class="text-xs mt-1 text-blue-500">GitHub API 限制最多显示100个结果，请使用更具体的关键词</div>
+                `;
+            } else {
+                statsElement.textContent = `共找到 ${totalCount} 个结果`;
+            }
+            
+            const fileList = DOMManager.elements.fileList;
+            if (fileList) {
+                fileList.appendChild(statsElement);
+            }
+            
+            // 如果结果很多，显示提示
+            if (totalCount > 100) {
+                ToastManager.show(`找到 ${totalCount} 个结果，显示前100个`);
+            }
         }
     },
 
