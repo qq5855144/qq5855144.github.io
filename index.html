@@ -2321,13 +2321,31 @@ const StateManager = {
         const cacheData = this.directoryCache.get(cacheKey);
         if (!cacheData) return null;
         
-        const cacheExpireTime = 600000;
+        // 延长缓存时间到30分钟
+        const cacheExpireTime = 30 * 60 * 1000; // 30分钟
         if (Date.now() - cacheData.timestamp > cacheExpireTime) {
             this.directoryCache.delete(cacheKey);
             return null;
         }
         
         return [...cacheData.files];
+    },
+    
+    // 增强搜索缓存
+    getCachedSearchResults(query, page = 1) {
+        if (this.searchResultCache && 
+            this.searchResultCache.query === query && 
+            this.searchResultCache.currentPage === page) {
+            
+            const cacheExpireTime = 30 * 60 * 1000; // 30分钟
+            if (Date.now() - this.searchResultCache.timestamp > cacheExpireTime) {
+                this.searchResultCache = null;
+                return null;
+            }
+            
+            return this.searchResultCache;
+        }
+        return null;
     },
     
     // 清除目录缓存
@@ -4279,10 +4297,11 @@ const AutoRefreshManager = {
     }
 };
 
-// ==================== 导航管理模块 ====================
+// ==================== 导航管理模块 - 修复完整版 ====================
 const NavigationManager = {
-    // 加载仓库列表
-    async loadRepositories() {
+    // 加载仓库列表 - 修复版本
+    async loadRepositories(useCache = true) {
+        // 清除搜索相关状态，但保留缓存
         StateManager.currentSearchQuery = null;
         StateManager.searchResultCache = null;
         
@@ -4295,10 +4314,13 @@ const NavigationManager = {
         
         this.pushHistoryState('repositories', { type: 'repositories' });
         
-        const cachedRepos = StateManager.getCachedDirectory('repositories', '');
-        if (cachedRepos) {
-            FileManager.renderFileList(cachedRepos);
-            return;
+        // 优先使用缓存
+        if (useCache) {
+            const cachedRepos = StateManager.getCachedDirectory('repositories', '');
+            if (cachedRepos) {
+                FileManager.renderFileList(cachedRepos);
+                return;
+            }
         }
         
         try {
@@ -4312,7 +4334,7 @@ const NavigationManager = {
     },
     
     // 加载仓库内容 - 修复版本
-    async loadRepositoryContents(repo, path = '') {
+    async loadRepositoryContents(repo, path = '', useCache = true) {
         DOMManager.showLoading();
         StateManager.setCurrentRepo(repo);
         StateManager.setCurrentPath(path);
@@ -4356,18 +4378,21 @@ const NavigationManager = {
             query: StateManager.currentSearchQuery
         });
         
-        const cachedFiles = StateManager.getCachedDirectory(repo, path);
-        if (cachedFiles) {
-            StateManager.setCurrentFiles(cachedFiles);
-            const sortedContents = [...cachedFiles].sort((a, b) => {
-                if (a.type === b.type) {
-                    return a.name.localeCompare(b.name);
-                }
-                return a.type === 'dir' ? -1 : 1;
-            });
-            FileManager.renderFileList(sortedContents);
-            this.updateStaticSiteButton(cachedFiles, path);
-            return;
+        // 优先使用缓存
+        if (useCache) {
+            const cachedFiles = StateManager.getCachedDirectory(repo, path);
+            if (cachedFiles) {
+                StateManager.setCurrentFiles(cachedFiles);
+                const sortedContents = [...cachedFiles].sort((a, b) => {
+                    if (a.type === b.type) {
+                        return a.name.localeCompare(b.name);
+                    }
+                    return a.type === 'dir' ? -1 : 1;
+                });
+                FileManager.renderFileList(sortedContents);
+                this.updateStaticSiteButton(cachedFiles, path);
+                return;
+            }
         }
         
         try {
@@ -4462,14 +4487,35 @@ const NavigationManager = {
         return window.location.pathname;
     },
     
-    // 处理历史回退
+    // 处理历史回退 - 修复版本
     handlePopState(event) {
         if (event.state && event.state.type) {
             const { type, data } = event.state;
-            this.navigateToState(type, data);
+            console.log('处理历史回退:', type, data);
+            
+            // 根据状态类型决定是否使用缓存
+            let useCache = true;
+            
+            // 如果是搜索结果到仓库的导航，使用缓存
+            if (type === 'contents' && data.isSearch) {
+                useCache = true;
+                // 恢复搜索状态
+                StateManager.currentSearchQuery = data.query;
+            } 
+            // 如果是搜索结果的导航，使用缓存
+            else if (type === 'search') {
+                useCache = true;
+                StateManager.currentSearchQuery = data.query;
+            }
+            // 其他情况也尽量使用缓存
+            else {
+                useCache = true;
+            }
+            
+            this.navigateToState(type, data, useCache);
         } else {
             const state = this.parseURL();
-            this.navigateToState(state.type, state.data);
+            this.navigateToState(state.type, state.data, true);
         }
     },
     
@@ -4506,39 +4552,42 @@ const NavigationManager = {
     },
     
     // 导航到状态 - 修复版本
-    navigateToState(type, data) {
-        console.log('导航到状态:', type, data);
+    navigateToState(type, data, useCache = true) {
+        console.log('导航到状态:', type, data, '使用缓存:', useCache);
         
         if (type === 'repositories') {
-            StateManager.currentSearchQuery = null;
-            StateManager.searchResultCache = null;
-            this.loadRepositories();
+            // 保留搜索查询状态，但不显示搜索结果
+            this.loadRepositories(useCache);
         } else if (type === 'contents') {
             // 恢复搜索状态
             if (data.isSearch && data.query) {
                 StateManager.currentSearchQuery = data.query;
-            } else {
-                StateManager.currentSearchQuery = null;
             }
             
-            this.loadRepositoryContents(data.repo, data.path);
+            this.loadRepositoryContents(data.repo, data.path, useCache);
         } else if (type === 'search') {
             StateManager.currentSearchQuery = data.query;
-            
-            // 如果是搜索结果中的仓库返回搜索列表
-            if (data.isSearchRepo) {
-                this.loadSearchResults(data.query);
-            } else {
-                DOMManager.toggleSearchBox(false);
-                this.loadSearchResults(data.query);
-            }
+            this.loadSearchResults(data.query, 1, useCache);
         } else {
-            this.loadRepositories();
+            this.loadRepositories(useCache);
         }
     },
     
-    // 加载搜索结果 - 移除加载更多按钮
-    async loadSearchResults(query, page = 1) {
+    // 加载搜索结果 - 修复版本
+    async loadSearchResults(query, page = 1, useCache = true) {
+        // 如果使用缓存且查询相同，直接使用缓存结果
+        if (useCache && StateManager.searchResultCache && 
+            StateManager.searchResultCache.query === query && 
+            StateManager.searchResultCache.currentPage === page) {
+            
+            DOMManager.showFileList();
+            StateManager.setCurrentFiles(StateManager.searchResultCache.results);
+            FileManager.renderFileList(StateManager.searchResultCache.results);
+            this.showSearchStats(StateManager.searchResultCache.totalCount, 
+                               StateManager.searchResultCache.results.length);
+            return;
+        }
+        
         DOMManager.showLoading();
         StateManager.setCurrentPath('');
         StateManager.setCurrentRepo('');
@@ -4732,20 +4781,20 @@ const NavigationManager = {
         
         // 备用逻辑：基于当前状态判断
         if (StateManager.currentRepo && StateManager.currentPath && StateManager.currentSearchQuery) {
-            // 搜索结果仓库的子目录 -> 返回仓库根目录
-            this.loadRepositoryContents(StateManager.currentRepo);
+            // 搜索结果仓库的子目录 -> 返回仓库根目录（使用缓存）
+            this.loadRepositoryContents(StateManager.currentRepo, '', true);
         } else if (StateManager.currentRepo && StateManager.currentSearchQuery) {
-            // 搜索结果仓库的根目录 -> 返回搜索结果
-            this.loadSearchResults(StateManager.currentSearchQuery);
+            // 搜索结果仓库的根目录 -> 返回搜索结果（使用缓存）
+            this.loadSearchResults(StateManager.currentSearchQuery, 1, true);
         } else if (StateManager.currentRepo) {
-            // 普通仓库 -> 返回仓库列表
-            this.loadRepositories();
+            // 普通仓库 -> 返回仓库列表（使用缓存）
+            this.loadRepositories(true);
         } else if (StateManager.currentSearchQuery) {
-            // 搜索结果列表 -> 返回仓库列表
-            this.loadRepositories();
+            // 搜索结果列表 -> 返回仓库列表（使用缓存）
+            this.loadRepositories(true);
         } else {
-            // 默认返回仓库列表
-            this.loadRepositories();
+            // 默认返回仓库列表（使用缓存）
+            this.loadRepositories(true);
         }
     }
 };
