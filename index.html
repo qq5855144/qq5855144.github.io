@@ -55,7 +55,7 @@ body {
 
 .app-content {
     flex: 1;
-    margin-top: 80px;
+    margin-top: calc(80px + 0.1rem) !important; /* 页头高度 + 额外间距 */
     margin-bottom: 80px;
     padding: 1rem;
     overflow-y: auto;
@@ -802,25 +802,6 @@ body {
     margin-top: 15vh;
 }
 
-.search-overlay-close {
-    position: absolute;
-    top: -80px;
-    right: 0;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: white;
-    font-size: 18px;
-}
 
 .search-overlay-close:hover {
     background: rgba(255, 255, 255, 0.3);
@@ -1887,10 +1868,7 @@ body {
    <!-- 更新搜索遮罩层HTML结构 -->
 <div id="search-overlay" class="search-overlay hidden">
     <div class="search-overlay-content">
-        <button id="search-overlay-close" class="search-overlay-close">
-            <i class="fas fa-times"></i>
-        </button>
-        
+          
         <!-- 搜索类型选择器 -->
         <div class="search-type-selector">
             <button class="search-type-btn active" data-type="repositories">
