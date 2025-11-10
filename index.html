@@ -485,6 +485,76 @@ body {
     gap: 8px;
 }
 
+/*====================安装包下载按钮基础样式 ====================*/
+.release-asset-btn {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 6px 8px;
+    color: var(--text-primary);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+@media (max-width: 480px) {
+    .release-asset-btn {
+        padding: 4px 6px;
+        font-size: 10px;
+        gap: 2px;
+    }
+    .asset-filename {
+        max-width: 80px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+}
+
+.release-asset-btn:hover {
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(31, 38, 135, 0.1);
+}
+
+.release-asset-btn i {
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+/* 产物类型标签 */
+.asset-type-badge {
+    font-size: 9px;
+    padding: 1px 3px;
+    border-radius: 3px;
+    background: rgba(79, 70, 229, 0.1);
+    color: var(--primary-color);
+    margin-left: 3px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+/* 文件名样式 */
+.asset-filename {
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 文件大小样式 */
+.asset-size {
+    color: var(--text-secondary);
+    font-size: 10px;
+    margin-left: 4px;
+    flex-shrink: 0;
+}
+
 /* ==================== 工具栏和菜单 ==================== */
 .toolbar {
     background: rgba(255, 255, 255, 0.2);
@@ -2611,12 +2681,19 @@ const DOMManager = {
             }
         }
     },
-     // 渲染版本列表
-    renderReleases(releases) {
+     
+// 发行版本列表渲染
+renderReleases(releases) {
     const { releasesSection, releasesList, releasesEmpty, releasesLoading } = this.elements;
     
+    // 关键修复：搜索结果页直接返回，不渲染发布版本
+    if (StateManager.currentSearchQuery && !StateManager.currentRepo) {
+        this.hide(releasesSection);
+        return;
+    }
+    
     this.hide(releasesLoading);
-    this.show(releasesSection); // 强制显示区域（符合hasReleases=true的预期）
+    this.show(releasesSection);
     
     if (releases && releases.length > 0) {
         this.show(releasesList);
@@ -2649,8 +2726,187 @@ const DOMManager = {
             releaseDesc.className = 'text-sm text-gray-600 mb-3';
             releaseDesc.innerHTML = release.body ? release.body.replace(/\n/g, '<br>') : '无描述';
             
+            // 发行产物下载区域
+            const assetsContainer = document.createElement('div');
+            assetsContainer.className = 'mb-3';
+            
+            // 完整产物类型映射（含优先级+图标+类型名称）- 修复版
+            const assetTypeMap = {
+                // 核心安装包（优先级1）
+                'exe': { type: 'Windows安装包', icon: 'fab fa-windows', priority: 1 },
+                'msi': { type: 'Windows安装程序', icon: 'fab fa-windows', priority: 1 },
+                'dmg': { type: 'Mac安装包', icon: 'fab fa-apple', priority: 1 },
+                'pkg': { type: 'Mac安装程序', icon: 'fab fa-apple', priority: 1 },
+                'deb': { type: 'Debian包', icon: 'fab fa-ubuntu', priority: 1 },
+                'rpm': { type: 'RPM包', icon: 'fab fa-redhat', priority: 1 },
+                'apk': { type: 'Android安装包', icon: 'fab fa-android', priority: 1 },
+                'ipa': { type: 'iOS安装包', icon: 'fab fa-apple', priority: 1 },
+                'appimage': { type: 'Linux便携包', icon: 'fab fa-linux', priority: 1 },
+                
+                // 压缩包（优先级2）
+                'zip': { type: 'ZIP压缩包', icon: 'fas fa-file-archive', priority: 2 },
+                'tar.gz': { type: 'TGZ压缩包', icon: 'fas fa-file-archive', priority: 2 },
+                'tar.bz2': { type: 'BZ2压缩包', icon: 'fas fa-file-archive', priority: 2 },
+                '7z': { type: '7Z压缩包', icon: 'fas fa-file-archive', priority: 2 },
+                'rar': { type: 'RAR压缩包', icon: 'fas fa-file-archive', priority: 2 },
+                'gz': { type: 'GZ压缩包', icon: 'fas fa-file-archive', priority: 2 },
+                'tar': { type: 'TAR压缩包', icon: 'fas fa-file-archive', priority: 2 },
+                
+                // 镜像/可执行文件（优先级3）
+                'iso': { type: '镜像文件', icon: 'fas fa-compact-disc', priority: 3 },
+                'bin': { type: '可执行文件', icon: 'fas fa-file-code', priority: 3 },
+                'sh': { type: 'Shell脚本', icon: 'fas fa-terminal', priority: 3 },
+                'bat': { type: '批处理脚本', icon: 'fas fa-terminal', priority: 3 },
+                'cmd': { type: '命令脚本', icon: 'fas fa-terminal', priority: 3 },
+                'run': { type: '运行文件', icon: 'fas fa-play', priority: 3 },
+                
+                // 开发产物（优先级4）
+                'jar': { type: 'Java程序包', icon: 'fab fa-java', priority: 4 },
+                'war': { type: 'Web应用包', icon: 'fas fa-globe', priority: 4 },
+                'ear': { type: '企业应用包', icon: 'fas fa-server', priority: 4 },
+                'docker': { type: 'Docker镜像', icon: 'fab fa-docker', priority: 4 },
+                'whl': { type: 'Python包', icon: 'fab fa-python', priority: 4 },
+                'egg': { type: 'Python包', icon: 'fab fa-python', priority: 4 },
+                'gem': { type: 'Ruby包', icon: 'fas fa-gem', priority: 4 },
+                'nupkg': { type: 'NuGet包', icon: 'fas fa-cube', priority: 4 },
+                'crx': { type: 'Chrome扩展', icon: 'fab fa-chrome', priority: 4 },
+                
+                // 程序文件（优先级5）
+                'app': { type: '应用程序', icon: 'fas fa-cube', priority: 5 },
+                'dll': { type: '动态库', icon: 'fas fa-puzzle-piece', priority: 5 },
+                'so': { type: '共享库', icon: 'fas fa-puzzle-piece', priority: 5 },
+                'a': { type: '静态库', icon: 'fas fa-puzzle-piece', priority: 5 },
+                'lib': { type: '库文件', icon: 'fas fa-puzzle-piece', priority: 5 },
+                'o': { type: '目标文件', icon: 'fas fa-file-code', priority: 5 },
+                'obj': { type: '目标文件', icon: 'fas fa-file-code', priority: 5 },
+                
+                // 配置/数据文件（优先级6）
+                'yml': { type: 'YAML配置', icon: 'fas fa-cog', priority: 6 },
+                'yaml': { type: 'YAML配置', icon: 'fas fa-cog', priority: 6 },
+                'json': { type: 'JSON配置', icon: 'fas fa-code', priority: 6 },
+                'xml': { type: 'XML配置', icon: 'fas fa-code', priority: 6 },
+                'conf': { type: '配置文件', icon: 'fas fa-cog', priority: 6 },
+                'cfg': { type: '配置文件', icon: 'fas fa-cog', priority: 6 },
+                'config': { type: '配置文件', icon: 'fas fa-cog', priority: 6 },
+                'ini': { type: '配置文件', icon: 'fas fa-cog', priority: 6 },
+                'properties': { type: '属性文件', icon: 'fas fa-cog', priority: 6 },
+                'env': { type: '环境配置', icon: 'fas fa-leaf', priority: 6 },
+                'toml': { type: 'TOML配置', icon: 'fas fa-cog', priority: 6 },
+                
+                // 文档文件（优先级7）
+                'md': { type: 'Markdown文档', icon: 'fas fa-file-alt', priority: 7 },
+                'txt': { type: '文本文件', icon: 'fas fa-file-alt', priority: 7 },
+                'pdf': { type: 'PDF文档', icon: 'fas fa-file-pdf', priority: 7 },
+                'doc': { type: 'Word文档', icon: 'fas fa-file-word', priority: 7 },
+                'docx': { type: 'Word文档', icon: 'fas fa-file-word', priority: 7 },
+                'xls': { type: 'Excel文档', icon: 'fas fa-file-excel', priority: 7 },
+                'xlsx': { type: 'Excel文档', icon: 'fas fa-file-excel', priority: 7 },
+                'ppt': { type: 'PPT文档', icon: 'fas fa-file-powerpoint', priority: 7 },
+                'pptx': { type: 'PPT文档', icon: 'fas fa-file-powerpoint', priority: 7 },
+                'html': { type: '网页文件', icon: 'fas fa-file-code', priority: 7 },
+                'htm': { type: '网页文件', icon: 'fas fa-file-code', priority: 7 },
+                
+                // 媒体文件（优先级8）
+                'png': { type: '图片文件', icon: 'fas fa-file-image', priority: 8 },
+                'jpg': { type: '图片文件', icon: 'fas fa-file-image', priority: 8 },
+                'jpeg': { type: '图片文件', icon: 'fas fa-file-image', priority: 8 },
+                'gif': { type: '动图文件', icon: 'fas fa-file-image', priority: 8 },
+                'svg': { type: '矢量图', icon: 'fas fa-file-image', priority: 8 },
+                'ico': { type: '图标文件', icon: 'fas fa-file-image', priority: 8 },
+                'mp3': { type: '音频文件', icon: 'fas fa-file-audio', priority: 8 },
+                'wav': { type: '音频文件', icon: 'fas fa-file-audio', priority: 8 },
+                'mp4': { type: '视频文件', icon: 'fas fa-file-video', priority: 8 },
+                'avi': { type: '视频文件', icon: 'fas fa-file-video', priority: 8 },
+                
+                // 其他文件（优先级9）
+                'log': { type: '日志文件', icon: 'fas fa-clipboard-list', priority: 9 },
+                'lock': { type: '锁定文件', icon: 'fas fa-lock', priority: 9 },
+                'sig': { type: '签名文件', icon: 'fas fa-signature', priority: 9 },
+                'asc': { type: '签名文件', icon: 'fas fa-signature', priority: 9 }
+            };
+            
+            // 筛选并按优先级排序产物
+            const sortedAssets = release.assets.sort((a, b) => {
+                const getAssetPriority = (asset) => {
+                    const assetNameLower = asset.name.toLowerCase();
+                    
+                    // 特殊处理复合扩展名
+                    if (assetNameLower.endsWith('.tar.gz')) return assetTypeMap['tar.gz'].priority;
+                    if (assetNameLower.endsWith('.tar.bz2')) return assetTypeMap['tar.bz2'].priority;
+                    
+                    // 普通扩展名匹配
+                    for (const [ext, typeInfo] of Object.entries(assetTypeMap)) {
+                        if (ext.length <= 6 && assetNameLower.endsWith(`.${ext}`)) {
+                            return typeInfo.priority;
+                        }
+                    }
+                    return 10; // 默认最低优先级
+                };
+                return getAssetPriority(a) - getAssetPriority(b);
+            });
+            
+            if (sortedAssets.length > 0) {
+                const assetsTitle = document.createElement('div');
+                assetsTitle.className = 'text-sm font-medium text-gray-700 mb-2';
+                assetsTitle.textContent = `发行产物（共${sortedAssets.length}个）：`;
+                assetsContainer.appendChild(assetsTitle);
+                
+                const assetsBtns = document.createElement('div');
+                assetsBtns.className = 'flex flex-wrap gap-2';
+                
+                sortedAssets.forEach(asset => {
+                    // 匹配产物类型
+                    let assetType = '其他文件';
+                    let iconClass = 'fas fa-download';
+                    const assetNameLower = asset.name.toLowerCase();
+                    
+                    // 特殊处理复合扩展名
+                    if (assetNameLower.endsWith('.tar.gz')) {
+                        assetType = assetTypeMap['tar.gz'].type;
+                        iconClass = assetTypeMap['tar.gz'].icon;
+                    } else if (assetNameLower.endsWith('.tar.bz2')) {
+                        assetType = assetTypeMap['tar.bz2'].type;
+                        iconClass = assetTypeMap['tar.bz2'].icon;
+                    } else {
+                        // 普通扩展名匹配
+                        for (const [ext, typeInfo] of Object.entries(assetTypeMap)) {
+                            if (ext.length <= 6 && assetNameLower.endsWith(`.${ext}`)) {
+                                assetType = typeInfo.type;
+                                iconClass = typeInfo.icon;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // 格式化文件大小
+                    const formatFileSize = (bytes) => {
+                        if (bytes < 1024) return bytes + ' B';
+                        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+                        if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                        return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+                    };
+                    const fileSize = formatFileSize(asset.size);
+                    
+                    // 创建下载按钮（响应式适配）
+                    const assetBtn = document.createElement('a');
+                    assetBtn.href = asset.browser_download_url;
+                    assetBtn.target = '_blank';
+                    assetBtn.className = 'release-asset-btn';
+                    assetBtn.innerHTML = `
+                        <i class="${iconClass}"></i>
+                        <span class="asset-filename">${asset.name}</span>
+                        <span class="asset-type-badge">${assetType}</span>
+                        <span class="asset-size">${fileSize}</span>
+                    `;
+                    assetsBtns.appendChild(assetBtn);
+                });
+                
+                assetsContainer.appendChild(assetsBtns);
+            }
+            
+            // 版本操作按钮
             const releaseActions = document.createElement('div');
-            releaseActions.className = 'flex gap-2';
+            releaseActions.className = 'flex gap-2 flex-wrap';
             
             const downloadBtn = document.createElement('a');
             downloadBtn.href = release.zipball_url;
@@ -2667,15 +2923,18 @@ const DOMManager = {
             releaseActions.appendChild(downloadBtn);
             releaseActions.appendChild(visitBtn);
             
+            // 组装版本项
             releaseItem.appendChild(releaseHeader);
             releaseItem.appendChild(releaseTitle);
             releaseItem.appendChild(releaseDesc);
+            if (sortedAssets.length > 0) {
+                releaseItem.appendChild(assetsContainer);
+            }
             releaseItem.appendChild(releaseActions);
             
             releasesList.appendChild(releaseItem);
         });
     } else {
-        // 有hasReleases标记但无版本数据，显示空状态
         this.hide(releasesList);
         this.show(releasesEmpty);
         releasesEmpty.innerHTML = `
@@ -4766,7 +5025,8 @@ async loadSearchResults(query, page = 1, useCache = true) {
         DOMManager.showFileList();
         StateManager.setCurrentFiles(StateManager.searchResultCache.results);
         FileManager.renderFileList(StateManager.searchResultCache.results);
-        // 移除统计信息显示
+        // 关键修复：搜索结果页强制隐藏发布版本区域
+        DOMManager.hide(DOMManager.elements.releasesSection);
         return;
     }
     
@@ -4777,6 +5037,7 @@ async loadSearchResults(query, page = 1, useCache = true) {
     
     this.updateBreadcrumb([`搜索结果: "${query}"`]);
     DOMManager.updateButtonVisibility(true);
+    // 关键修复：初始化时隐藏发布版本区域
     DOMManager.hide(DOMManager.elements.releasesSection);
     
     this.pushHistoryState('search', { 
@@ -4830,6 +5091,8 @@ async loadSearchResults(query, page = 1, useCache = true) {
         console.error('搜索失败:', error);
         ToastManager.show('搜索失败: ' + error.message);
         DOMManager.showEmptyState();
+        // 异常时也隐藏发布版本区域
+        DOMManager.hide(DOMManager.elements.releasesSection);
     }
 },
 
