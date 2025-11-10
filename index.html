@@ -6724,8 +6724,6 @@ const AuthManager = {
             // 认证成功
             StateManager.setToken(token);
             StateManager.currentUser = userData;
-            
-            ToastManager.show(`欢迎回来: ${userData.login || '用户'}！`);
             DOMManager.showMainScreen();
             
             // 更新用户信息
