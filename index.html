@@ -1719,49 +1719,49 @@ body {
         </div>
     </div>
     
-    <!-- 上下文菜单 -->
+   <!-- 上下文菜单（保留原文按钮顺序，图标添加色彩） -->
 <div id="context-menu" class="context-menu">
     <div id="context-open" class="context-menu-item">
-        <i class="fas fa-folder-open"></i>
+        <i class="fas fa-folder-open text-blue-500"></i>
         <span>打开</span>
     </div>
     <div class="context-menu-divider"></div>  
     <div id="context-copy-repo-link" class="context-menu-item">
-        <i class="fas fa-link"></i>
+        <i class="fas fa-link text-purple-500"></i>
         <span>复制仓库链接</span>
     </div>
     <div id="context-copy-site-link" class="context-menu-item">
-        <i class="fas fa-globe"></i>
-        <span>复制网站链接</span>
+        <i class="fas fa-external-link-alt text-green-500"></i>
+        <span class="text-green-500">访问网站</span>
     </div>
     <div id="context-rename-repo" class="context-menu-item">
-        <i class="fas fa-edit"></i>
+        <i class="fas fa-edit text-teal-500"></i>
         <span>重命名仓库</span>
     </div>
     <div id="context-download" class="context-menu-item">
-        <i class="fas fa-download"></i>
+        <i class="fas fa-download text-green-500"></i>
         <span>下载</span>
     </div>
     <div id="context-rename" class="context-menu-item">
-        <i class="fas fa-edit"></i>
+        <i class="fas fa-edit text-teal-500"></i>
         <span>重命名</span>
     </div>
     <div id="context-copy-link" class="context-menu-item">
-        <i class="fas fa-link"></i>
+        <i class="fas fa-link text-blue-500"></i>
         <span>复制链接</span>
     </div>
     <div id="context-copy-proxy-link" class="context-menu-item">
-        <i class="fas fa-share-alt"></i>
+        <i class="fas fa-share-alt text-orange-500"></i>
         <span>复制代理链接</span>
     </div>
     <div id="context-download-source" class="context-menu-item">
-        <i class="fas fa-download text-blue-500"></i>
-        <span class="text-blue-500">下载源码</span>
-    </div>
-    <div id="context-build-app" class="context-menu-item context-build-app">
-        <i class="fas fa-hammer"></i>
-        <span>运行工作流</span>
-    </div>
+    <i class="fas fa-download text-blue-500"></i>
+    <span class="text-blue-500">下载源码</span>
+</div>
+<div id="context-build-app" class="context-menu-item context-build-app">
+    <i class="fas fa-hammer text-red-500"></i>
+    <span>运行工作流</span>
+</div>
     <div id="context-enable-pages" class="context-menu-item">
         <i class="fas fa-globe text-green-500"></i>
         <span class="text-green-500">部署网站</span>
@@ -1771,45 +1771,52 @@ body {
         <i class="fas fa-trash text-red-500"></i>
         <span class="text-red-500">删除</span>
     </div>
+    <!-- 动态添加的按钮容器 -->
+    <div id="context-dynamic-buttons"></div>
 </div>
 
-    
-    <!-- 搜索结果上下文菜单 -->
+<!-- 搜索结果上下文菜单（保留原文结构，图标添加色彩） -->
 <div id="search-context-menu" class="context-menu">
     <div id="search-context-fork" class="context-menu-item">
         <i class="fas fa-code-branch text-blue-500"></i>
         <span class="text-blue-500">复刻仓库</span>
     </div>
     <div id="search-context-copy-link" class="context-menu-item">
-        <i class="fas fa-link"></i>
+        <i class="fas fa-link text-purple-500"></i>
         <span>复制仓库链接</span>
     </div>
+    <div id="search-context-visit-site" class="context-menu-item">
+        <i class="fas fa-external-link text-green-500"></i>
+        <span class="text-green-500">访问网站</span>
+    </div>
     <div id="search-context-visit" class="context-menu-item">
-        <i class="fas fa-external-link-alt"></i>
+        <i class="fas fa-external-link-alt text-blue-500"></i>
         <span>访问仓库</span>
     </div>
 </div>
 
-<!-- 新增：搜索结果文件上下文菜单 -->
+<!-- 搜索结果文件上下文菜单（保留原文结构，图标添加色彩） -->
 <div id="search-file-context-menu" class="search-file-context-menu">
     <div id="search-file-open" class="context-menu-item">
-        <i class="fas fa-folder-open"></i>
+        <i class="fas fa-folder-open text-blue-500"></i>
         <span>打开</span>
     </div>
     <div id="search-file-download" class="context-menu-item">
-        <i class="fas fa-download"></i>
+        <i class="fas fa-download text-green-500"></i>
         <span>下载</span>
     </div>
     <div class="context-menu-divider"></div>
     <div id="search-file-copy-link" class="context-menu-item">
-        <i class="fas fa-link"></i>
+        <i class="fas fa-link text-blue-500"></i>
         <span>复制链接</span>
     </div>
     <div id="search-file-copy-proxy-link" class="context-menu-item">
-        <i class="fas fa-share-alt"></i>
+        <i class="fas fa-share-alt text-orange-500"></i>
         <span>复制代理链接</span>
     </div>
 </div>
+
+
     
     <!-- 添加部署网站配置对话框 -->
     <div id="static-site-dialog" class="fixed inset-0 z-50 dialog-overlay flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
@@ -2604,78 +2611,79 @@ const DOMManager = {
             }
         }
     },
-    // 渲染版本列表 - 最终修复版本
+     // 渲染版本列表
     renderReleases(releases) {
-        const { releasesSection, releasesList, releasesEmpty, releasesLoading } = this.elements;
+    const { releasesSection, releasesList, releasesEmpty, releasesLoading } = this.elements;
+    
+    this.hide(releasesLoading);
+    this.show(releasesSection); // 强制显示区域（符合hasReleases=true的预期）
+    
+    if (releases && releases.length > 0) {
+        this.show(releasesList);
+        this.hide(releasesEmpty);
         
-        // 先隐藏加载状态
-        this.hide(releasesLoading);
-        
-        // 修复逻辑：只要有版本数据就显示版本区域
-        if (releases && releases.length > 0) {
-            // 有版本时显示版本区域和列表
-            this.show(releasesSection);
-            this.show(releasesList);
-            this.hide(releasesEmpty);
+        releasesList.innerHTML = '';
+        releases.forEach(release => {
+            const releaseItem = document.createElement('div');
+            releaseItem.className = 'glass p-4 mb-3';
             
-            releasesList.innerHTML = '';
+            const releaseHeader = document.createElement('div');
+            releaseHeader.className = 'flex items-center justify-between mb-2';
             
-            releases.forEach(release => {
-                const releaseItem = document.createElement('div');
-                releaseItem.className = 'glass p-4 mb-3';
-                
-                const releaseHeader = document.createElement('div');
-                releaseHeader.className = 'flex items-center justify-between mb-2';
-                
-                const tagName = document.createElement('h3');
-                tagName.className = 'font-bold text-lg text-blue-600';
-                tagName.textContent = release.tag_name;
-                
-                const releaseDate = document.createElement('span');
-                releaseDate.className = 'text-sm text-gray-500';
-                releaseDate.textContent = new Date(release.published_at).toLocaleString();
-                
-                releaseHeader.appendChild(tagName);
-                releaseHeader.appendChild(releaseDate);
-                
-                const releaseTitle = document.createElement('div');
-                releaseTitle.className = 'font-medium mb-2';
-                releaseTitle.textContent = release.name || '无标题版本';
-                
-                const releaseDesc = document.createElement('div');
-                releaseDesc.className = 'text-sm text-gray-600 mb-3';
-                releaseDesc.innerHTML = release.body ? release.body.replace(/\n/g, '<br>') : '无描述';
-                
-                const releaseActions = document.createElement('div');
-                releaseActions.className = 'flex gap-2';
-                
-                const downloadBtn = document.createElement('a');
-                downloadBtn.href = release.zipball_url;
-                downloadBtn.target = '_blank';
-                downloadBtn.className = 'glass-btn px-3 py-1 text-sm flex items-center';
-                downloadBtn.innerHTML = '<i class="fas fa-download mr-1"></i> 下载源码';
-                
-                const visitBtn = document.createElement('a');
-                visitBtn.href = release.html_url;
-                visitBtn.target = '_blank';
-                visitBtn.className = 'glass-btn px-3 py-1 text-sm flex items-center';
-                visitBtn.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i> 查看详情';
-                
-                releaseActions.appendChild(downloadBtn);
-                releaseActions.appendChild(visitBtn);
-                
-                releaseItem.appendChild(releaseHeader);
-                releaseItem.appendChild(releaseTitle);
-                releaseItem.appendChild(releaseDesc);
-                releaseItem.appendChild(releaseActions);
-                
-                releasesList.appendChild(releaseItem);
-            });
-        } else {
-            // 无版本时隐藏整个版本区域
-            this.hide(releasesSection);
-        }
+            const tagName = document.createElement('h3');
+            tagName.className = 'font-bold text-lg text-blue-600';
+            tagName.textContent = release.tag_name;
+            
+            const releaseDate = document.createElement('span');
+            releaseDate.className = 'text-sm text-gray-500';
+            releaseDate.textContent = new Date(release.published_at).toLocaleString();
+            
+            releaseHeader.appendChild(tagName);
+            releaseHeader.appendChild(releaseDate);
+            
+            const releaseTitle = document.createElement('div');
+            releaseTitle.className = 'font-medium mb-2';
+            releaseTitle.textContent = release.name || '无标题版本';
+            
+            const releaseDesc = document.createElement('div');
+            releaseDesc.className = 'text-sm text-gray-600 mb-3';
+            releaseDesc.innerHTML = release.body ? release.body.replace(/\n/g, '<br>') : '无描述';
+            
+            const releaseActions = document.createElement('div');
+            releaseActions.className = 'flex gap-2';
+            
+            const downloadBtn = document.createElement('a');
+            downloadBtn.href = release.zipball_url;
+            downloadBtn.target = '_blank';
+            downloadBtn.className = 'glass-btn px-3 py-1 text-sm flex items-center';
+            downloadBtn.innerHTML = '<i class="fas fa-download mr-1"></i> 下载源码';
+            
+            const visitBtn = document.createElement('a');
+            visitBtn.href = release.html_url;
+            visitBtn.target = '_blank';
+            visitBtn.className = 'glass-btn px-3 py-1 text-sm flex items-center';
+            visitBtn.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i> 查看详情';
+            
+            releaseActions.appendChild(downloadBtn);
+            releaseActions.appendChild(visitBtn);
+            
+            releaseItem.appendChild(releaseHeader);
+            releaseItem.appendChild(releaseTitle);
+            releaseItem.appendChild(releaseDesc);
+            releaseItem.appendChild(releaseActions);
+            
+            releasesList.appendChild(releaseItem);
+        });
+    } else {
+        // 有hasReleases标记但无版本数据，显示空状态
+        this.hide(releasesList);
+        this.show(releasesEmpty);
+        releasesEmpty.innerHTML = `
+            <i class="fas fa-box-open text-4xl mb-2 opacity-50"></i>
+            <p>暂无发布版本</p>
+        `;
     }
+}
 };
 
 // ==================== API 服务模块 ====================
@@ -4485,88 +4493,111 @@ const NavigationManager = {
         }
     },
     
-    // 加载仓库内容 - 修复版本
+    // 加载仓库内容
     async loadRepositoryContents(repo, path = '', useCache = true) {
-        DOMManager.showLoading();
-        StateManager.setCurrentRepo(repo);
-        StateManager.setCurrentPath(path);
-        DOMManager.updateButtonVisibility(false);
+    DOMManager.showLoading();
+    StateManager.setCurrentRepo(repo);
+    StateManager.setCurrentPath(path);
+    DOMManager.updateButtonVisibility(false);
+    
+    // 关键修复：从仓库列表/搜索结果缓存中获取hasReleases状态
+    const isRepoRoot = path === '';
+    let shouldShowReleases = false;
+    
+    if (isRepoRoot) {
+        // 优先从搜索结果缓存获取（搜索进入的仓库）
+        let repoData = StateManager.searchResultCache?.results?.find(item => item.path === repo);
         
-        // 修复：只在仓库根目录显示版本列表
-        const isRepoRoot = path === '';
-        if (isRepoRoot) {
+        // 搜索缓存没有则从仓库列表缓存获取（直接进入的仓库）
+        if (!repoData) {
+            const repoListCache = StateManager.getCachedDirectory('repositories', '');
+            repoData = repoListCache?.find(item => item.path === repo);
+        }
+        
+        // 最终判断是否显示版本区域
+        shouldShowReleases = repoData?.hasReleases === true;
+        
+        if (shouldShowReleases) {
             // 显示版本区域和加载状态
             DOMManager.show(DOMManager.elements.releasesSection);
             DOMManager.show(DOMManager.elements.releasesLoading);
             DOMManager.hide(DOMManager.elements.releasesList);
             DOMManager.hide(DOMManager.elements.releasesEmpty);
             
-            // 异步加载版本列表
+            // 异步加载版本列表（修复：添加错误处理兜底）
             const [owner, repoName] = repo.split('/');
-            APIService.getRepositoryReleases(owner, repoName)
-                .then(releases => {
-                    DOMManager.renderReleases(releases);
-                })
-                .catch(error => {
-                    console.error('加载版本列表失败:', error);
-                    // 加载失败时隐藏版本区域
-                    DOMManager.hide(DOMManager.elements.releasesSection);
-                });
+            try {
+                const releases = await APIService.getRepositoryReleases(owner, repoName);
+                DOMManager.renderReleases(releases);
+            } catch (error) {
+                console.error('加载版本列表失败:', error);
+                // 加载失败仍保持区域显示（仅提示错误）
+                DOMManager.hide(DOMManager.elements.releasesLoading);
+                DOMManager.show(DOMManager.elements.releasesEmpty);
+                DOMManager.elements.releasesEmpty.innerHTML = `
+                    <i class="fas fa-exclamation-circle text-4xl mb-2 text-red-500"></i>
+                    <p>版本列表加载失败</p>
+                `;
+            }
         } else {
-            // 非根目录隐藏版本列表
+            // 无发布版本，隐藏区域
             DOMManager.hide(DOMManager.elements.releasesSection);
         }
-        
-        const [owner, repoName] = repo.split('/');
-        
-        const pathParts = path ? path.split('/') : [];
-        this.updateBreadcrumb([repo, ...pathParts]);
-        
-        const isFromSearch = StateManager.currentSearchQuery && StateManager.currentRepo === '';
-        this.pushHistoryState('contents', { 
-            repo, 
-            path: path || '',
-            isSearch: isFromSearch,
-            query: StateManager.currentSearchQuery
-        });
-        
-        // 优先使用缓存
-        if (useCache) {
-            const cachedFiles = StateManager.getCachedDirectory(repo, path);
-            if (cachedFiles) {
-                StateManager.setCurrentFiles(cachedFiles);
-                const sortedContents = [...cachedFiles].sort((a, b) => {
-                    if (a.type === b.type) {
-                        return a.name.localeCompare(b.name);
-                    }
-                    return a.type === 'dir' ? -1 : 1;
-                });
-                FileManager.renderFileList(sortedContents);
-                this.updateStaticSiteButton(cachedFiles, path);
-                return;
-            }
-        }
-        
-        try {
-            const contents = await APIService.getRepositoryContents(repo, path);
-            StateManager.setCurrentFiles(contents);
-            StateManager.cacheDirectory(repo, path, contents);
-            
-            const sortedContents = [...contents].sort((a, b) => {
+    } else {
+        // 非根目录，隐藏区域
+        DOMManager.hide(DOMManager.elements.releasesSection);
+    }
+    
+    // 以下保留原有逻辑（加载仓库文件列表）
+    const [owner, repoName] = repo.split('/');
+    const pathParts = path ? path.split('/') : [];
+    this.updateBreadcrumb([repo, ...pathParts]);
+    
+    const isFromSearch = StateManager.currentSearchQuery && StateManager.currentRepo === '';
+    this.pushHistoryState('contents', { 
+        repo, 
+        path: path || '',
+        isSearch: isFromSearch,
+        query: StateManager.currentSearchQuery
+    });
+    
+    // 优先使用缓存
+    if (useCache) {
+        const cachedFiles = StateManager.getCachedDirectory(repo, path);
+        if (cachedFiles) {
+            StateManager.setCurrentFiles(cachedFiles);
+            const sortedContents = [...cachedFiles].sort((a, b) => {
                 if (a.type === b.type) {
                     return a.name.localeCompare(b.name);
                 }
                 return a.type === 'dir' ? -1 : 1;
             });
-            
             FileManager.renderFileList(sortedContents);
-            this.updateStaticSiteButton(contents, path);
-            
-        } catch (error) {
-            ToastManager.show('加载失败: ' + error.message);
-            DOMManager.showEmptyState();
+            this.updateStaticSiteButton(cachedFiles, path);
+            return;
         }
-    },
+    }
+    
+    try {
+        const contents = await APIService.getRepositoryContents(repo, path);
+        StateManager.setCurrentFiles(contents);
+        StateManager.cacheDirectory(repo, path, contents);
+        
+        const sortedContents = [...contents].sort((a, b) => {
+            if (a.type === b.type) {
+                return a.name.localeCompare(b.name);
+            }
+            return a.type === 'dir' ? -1 : 1;
+        });
+        
+        FileManager.renderFileList(sortedContents);
+        this.updateStaticSiteButton(contents, path);
+        
+    } catch (error) {
+        ToastManager.show('加载失败: ' + error.message);
+        DOMManager.showEmptyState();
+    }
+},
     
     // 推送历史状态 - 修复版本
     pushHistoryState(type, data) {
@@ -5867,10 +5898,19 @@ async updatePagesStatusDisplay() {
     }
 };
 
-// ==================== 上下文菜单管理模块（最终修复版） ====================
+// ==================== 上下文菜单管理模块（保留原文显示逻辑，分离内联HTML） ====================
 const ContextMenuManager = {
     isSearchResultPage: false,
-    // 显示上下文菜单（主入口）
+    
+    // 初始化：绑定所有静态按钮事件（无内联HTML）
+    init() {
+        this.bindStaticMenuEvents();
+        this.bindSearchContextMenuEvents();
+        this.bindSearchFileContextMenuEvents();
+        this.bindGlobalClickHide();
+    },
+    
+    // 显示上下文菜单（主入口，保留原文逻辑）
     show(e, fileInfo, isSearchResultRepo = false) {
         e.preventDefault();
         e.stopPropagation();
@@ -5890,7 +5930,6 @@ const ContextMenuManager = {
         document.body.appendChild(mask);
         const targetIsSearchRepo = isSearchResultRepo || (this.isSearchResultPage && fileInfo.type === 'repo');
         StateManager.contextMenuTarget = fileInfo;
-        // 关键：直接根据fileInfo的pagesEnabled属性判断（仓库列表已显示标签则该属性为true）
         const isPagesEnabled = fileInfo.type === 'repo' && fileInfo.pagesEnabled === true;
         this.renderTargetMenu(fileInfo, targetIsSearchRepo, isPagesEnabled);
         this.positionMenu(e);
@@ -5899,7 +5938,8 @@ const ContextMenuManager = {
         const { contextMenu } = DOMManager.elements;
         contextMenu.classList.add('visible');
     },
-    // 渲染目标菜单（直接接收pagesEnabled状态）
+    
+    // 渲染目标菜单（完全保留原文显示逻辑）
     renderTargetMenu(fileInfo, targetIsSearchRepo, isPagesEnabled) {
         if (fileInfo.type === 'repo') {
             targetIsSearchRepo ? this.renderSearchResultRepoMenu(isPagesEnabled) : this.renderLocalRepoMenu(isPagesEnabled);
@@ -5907,155 +5947,161 @@ const ContextMenuManager = {
             this.renderFileFolderMenu(fileInfo);
         }
     },
-    // 渲染本地仓库菜单（方法a）
+    
+    // 渲染本地仓库菜单（保留原文按钮显示逻辑，无内联HTML）
     renderLocalRepoMenu(isPagesEnabled) {
-        const {
-            contextOpen, contextDownloadSource, contextEnablePages,
-            contextBuildApp, contextCopyRepoLink, contextCopySiteLink,
-            contextRenameRepo, contextDelete
-        } = DOMManager.elements;
+        const menuItems = [
+            DOMManager.elements.contextOpen,
+            DOMManager.elements.contextCopyRepoLink,
+            DOMManager.elements.contextCopySiteLink,
+            DOMManager.elements.contextRenameRepo,
+            DOMManager.elements.contextDownloadSource,
+            DOMManager.elements.contextBuildApp,
+            DOMManager.elements.contextEnablePages,
+            DOMManager.elements.contextDelete
+        ];
+        
+        // 重置所有菜单显示
         this.resetAllMenuVisibility();
-        contextOpen.style.display = 'flex';
-        contextCopyRepoLink.style.display = 'flex';
-        contextDownloadSource.style.display = 'flex';
-        contextDelete.style.display = 'flex';
-        contextRenameRepo.style.display = 'flex';
-        contextEnablePages.style.display = 'flex';
-        contextBuildApp.style.display = 'flex';
-        // 核心修复：移除hidden类并根据状态控制显示
-        contextCopySiteLink.classList.remove('hidden');
-        contextCopySiteLink.style.display = isPagesEnabled ? 'flex' : 'none';
+        
+        // 显示本地仓库专属菜单（按原文顺序）
+        menuItems.forEach(item => {
+            if (item) item.style.display = 'flex';
+        });
+        
+        // 控制访问网站按钮显示（保留原文逻辑）
+        const contextCopySiteLink = document.getElementById('context-copy-site-link');
+        if (contextCopySiteLink) {
+            contextCopySiteLink.style.display = isPagesEnabled ? 'flex' : 'none';
+            contextCopySiteLink.innerHTML = '<i class="fas fa-external-link-alt text-green-500"></i><span class="text-green-500">访问网站</span>';
+        }
+        
+        // 更新Pages按钮状态
         this.updatePagesMenuButton(StateManager.contextMenuTarget, isPagesEnabled);
+        
+        // 隐藏文件专属按钮
+        this.hideMenuItems([
+            'context-download',
+            'context-rename',
+            'context-copy-link',
+            'context-copy-proxy-link'
+        ]);
     },
-    // 渲染搜索结果仓库菜单（方法b）
+    
+    // 渲染搜索结果仓库菜单（保留原文逻辑）
     renderSearchResultRepoMenu(isPagesEnabled) {
-        const {
-            contextOpen, contextDownloadSource, contextCopyRepoLink,
-            contextCopySiteLink
-        } = DOMManager.elements;
+        const menuItems = [
+            DOMManager.elements.contextOpen,
+            DOMManager.elements.contextCopyRepoLink,
+            DOMManager.elements.contextCopySiteLink,
+            DOMManager.elements.contextDownloadSource
+        ];
+        
+        // 重置所有菜单显示
         this.resetAllMenuVisibility();
-        contextOpen.style.display = 'flex';
-        contextCopyRepoLink.style.display = 'flex';
-        contextDownloadSource.style.display = 'flex';
-        // 核心修复：添加复制网站链接按钮并控制显示
-        contextCopySiteLink.classList.remove('hidden');
-        contextCopySiteLink.style.display = isPagesEnabled ? 'flex' : 'none';
+        
+        // 显示搜索结果仓库菜单（按原文顺序）
+        menuItems.forEach(item => {
+            if (item) item.style.display = 'flex';
+        });
+        
+        // 控制访问网站按钮显示（保留原文逻辑）
+        const contextCopySiteLink = document.getElementById('context-copy-site-link');
+        if (contextCopySiteLink) {
+            contextCopySiteLink.style.display = isPagesEnabled ? 'flex' : 'none';
+            contextCopySiteLink.innerHTML = '<i class="fas fa-external-link-alt text-green-500"></i><span class="text-green-500">访问网站</span>';
+        }
+        
+        // 添加复刻和访问仓库按钮（保留原文动态添加逻辑）
         this.addForkButtonForSearchRepo(StateManager.contextMenuTarget);
         this.addVisitRepoButtonForSearchRepo(StateManager.contextMenuTarget);
     },
-    // 渲染文件/文件夹通用菜单
+    
+    // 渲染文件/文件夹菜单（保留原文逻辑）
     renderFileFolderMenu(fileInfo) {
-        const {
-            contextOpen, contextDownload, contextRename,
-            contextCopyLink, contextCopyProxyLink, contextDelete
-        } = DOMManager.elements;
-        this.resetAllMenuVisibility();
-        if (fileInfo.type === 'dir') contextOpen.style.display = 'flex';
-        if (fileInfo.type === 'file') {
-            contextDownload.style.display = 'flex';
-            contextRename.style.display = 'flex';
-            contextCopyLink.style.display = 'flex';
-            contextCopyProxyLink.style.display = 'flex';
-        }
-        contextDelete.style.display = 'flex';
-        this.removeForkButtonForSearchRepo();
-    },
-    // 重置所有菜单为隐藏状态
-    resetAllMenuVisibility() {
         const menuItems = [
             DOMManager.elements.contextOpen,
             DOMManager.elements.contextDownload,
             DOMManager.elements.contextRename,
             DOMManager.elements.contextCopyLink,
             DOMManager.elements.contextCopyProxyLink,
-            DOMManager.elements.contextDelete,
-            DOMManager.elements.contextDownloadSource,
-            DOMManager.elements.contextEnablePages,
-            DOMManager.elements.contextBuildApp,
-            DOMManager.elements.contextCopyRepoLink,
-            DOMManager.elements.contextCopySiteLink,
-            DOMManager.elements.contextRenameRepo
+            DOMManager.elements.contextDelete
         ];
-        menuItems.forEach(item => item && (item.style.display = 'none'));
+        
+        // 重置所有菜单显示
+        this.resetAllMenuVisibility();
+        
+        // 按文件类型显示菜单（保留原文逻辑）
+        if (fileInfo.type === 'dir') {
+            // 文件夹仅显示打开和删除
+            document.getElementById('context-open').style.display = 'flex';
+            document.getElementById('context-delete').style.display = 'flex';
+            this.hideMenuItems([
+                'context-download',
+                'context-rename',
+                'context-copy-link',
+                'context-copy-proxy-link'
+            ]);
+        } else if (fileInfo.type === 'file') {
+            // 文件显示所有文件相关按钮
+            menuItems.forEach(item => {
+                if (item) item.style.display = 'flex';
+            });
+            this.hideMenuItems([
+                'context-copy-repo-link',
+                'context-copy-site-link',
+                'context-rename-repo',
+                'context-download-source',
+                'context-build-app',
+                'context-enable-pages'
+            ]);
+        }
+        
+        // 移除搜索结果仓库专属按钮
         this.removeForkButtonForSearchRepo();
     },
-    // 设置是否为搜索结果页面
-    setIsSearchResultPage(status) {
-        this.isSearchResultPage = status;
-    },
-    // 绑定搜索上下文菜单事件
-    bindSearchContextMenuEvents() {
-        const { searchContextFork, searchContextCopyLink, searchContextVisit } = DOMManager.elements;
-        searchContextFork?.addEventListener('click', () => this.handleSearchMenuItemClick('fork'));
-        searchContextCopyLink?.addEventListener('click', () => this.handleSearchMenuItemClick('copy-link'));
-        searchContextVisit?.addEventListener('click', () => this.handleSearchMenuItemClick('visit'));
-    },
-    // 添加搜索结果仓库「访问仓库」按钮
-    addVisitRepoButtonForSearchRepo(fileInfo) {
-        const visitBtn = document.getElementById('context-visit-repo');
-        if (visitBtn && visitBtn.parentNode) visitBtn.parentNode.removeChild(visitBtn);
-        const contextMenu = DOMManager.elements.contextMenu;
-        const newVisitBtn = document.createElement('div');
-        newVisitBtn.id = 'context-visit-repo';
-        newVisitBtn.className = 'context-menu-item';
-        newVisitBtn.innerHTML = '<i class="fas fa-external-link-alt text-blue-500"></i><span class="text-blue-500">访问仓库</span>';
-        newVisitBtn.addEventListener('click', () => {
-            window.open(`https://github.com/${fileInfo.path}`, '_blank');
-            this.hide();
+    
+    // 重置所有菜单为隐藏状态（保留原文逻辑）
+    resetAllMenuVisibility() {
+        // 隐藏所有主菜单按钮
+        document.querySelectorAll('#context-menu .context-menu-item').forEach(item => {
+            item.style.display = 'none';
         });
-        const copyRepoLink = DOMManager.elements.contextCopyRepoLink;
-        copyRepoLink ? copyRepoLink.after(newVisitBtn) : contextMenu && contextMenu.appendChild(newVisitBtn);
-    },
-    // 添加搜索结果仓库「复刻仓库」按钮
-    addForkButtonForSearchRepo(fileInfo) {
+        
+        // 隐藏所有搜索结果菜单按钮
+        document.querySelectorAll('#search-context-menu .context-menu-item').forEach(item => {
+            item.style.display = 'none';
+        });
+        
+        // 隐藏所有搜索文件菜单按钮
+        document.querySelectorAll('#search-file-context-menu .context-menu-item').forEach(item => {
+            item.style.display = 'none';
+        });
+        
+        // 移除动态按钮
         this.removeForkButtonForSearchRepo();
-        const contextMenu = DOMManager.elements.contextMenu;
-        const forkBtn = document.createElement('div');
-        forkBtn.id = 'context-fork-repo';
-        forkBtn.className = 'context-menu-item';
-        forkBtn.innerHTML = '<i class="fas fa-code-branch text-blue-500"></i><span class="text-blue-500">复刻仓库</span>';
-        forkBtn.addEventListener('click', () => {
-            this.forkRepository(fileInfo);
-            this.hide();
+    },
+    
+    // 批量隐藏菜单按钮（辅助方法）
+    hideMenuItems(ids) {
+        ids.forEach(id => {
+            const item = document.getElementById(id);
+            if (item) item.style.display = 'none';
         });
-        const visitBtn = document.getElementById('context-visit-repo');
-        visitBtn ? visitBtn.after(forkBtn) : contextMenu && contextMenu.appendChild(forkBtn);
     },
-    // 移除搜索结果仓库专属按钮
-    removeForkButtonForSearchRepo() {
-        const forkBtn = document.getElementById('context-fork-repo');
-        if (forkBtn && forkBtn.parentNode) forkBtn.parentNode.removeChild(forkBtn);
-        const visitBtn = document.getElementById('context-visit-repo');
-        if (visitBtn && visitBtn.parentNode) visitBtn.parentNode.removeChild(visitBtn);
-    },
+    
     // 更新Pages菜单按钮状态
     updatePagesMenuButton(fileInfo, isEnabled) {
-        const { contextEnablePages } = DOMManager.elements;
+        const contextEnablePages = document.getElementById('context-enable-pages');
         if (!contextEnablePages) return;
+        
         const finalIsEnabled = isEnabled !== undefined ? isEnabled : fileInfo.pagesEnabled === true;
         contextEnablePages.innerHTML = finalIsEnabled ?
             '<i class="fas fa-ban mr-2 text-red-500"></i><span class="text-red-500">禁用网站</span>' :
             '<i class="fas fa-globe mr-2 text-green-500"></i><span class="text-green-500">部署网站</span>';
     },
-    // 检查仓库Pages状态（备用方法，优先使用fileInfo.pagesEnabled）
-    async checkPagesStatus(repo) {
-        try {
-            const [owner, repoName] = repo.split('/');
-            const data = await APIService.getPagesStatus(owner, repoName);
-            const isEnabled = data.status === 'built' || data.status === 'building';
-            StateManager.pagesEnabledMap.set(repo, isEnabled);
-            return isEnabled;
-        } catch (error) {
-            console.error('检查Pages状态错误:', error);
-            StateManager.pagesEnabledMap.set(repo, false);
-            return false;
-        }
-    },
-    // 获取目标仓库路径
-    getTargetRepo(fileInfo) {
-        return fileInfo.type === 'repo' ? fileInfo.path : StateManager.currentRepo;
-    },
-    // 定位菜单位置
+    
+    // 定位菜单位置（保留原文逻辑）
     positionMenu(e) {
         const { contextMenu } = DOMManager.elements;
         const menuWidth = contextMenu.offsetWidth;
@@ -6079,18 +6125,121 @@ const ContextMenuManager = {
         contextMenu.style.left = `${posX}px`;
         contextMenu.style.top = `${posY}px`;
     },
-    // 隐藏菜单
+    
+    // 隐藏菜单（保留原文逻辑）
     hide() {
         const mask = document.getElementById('context-menu-mask');
         if (mask) mask.remove();
-        const { contextMenu } = DOMManager.elements;
+        const { contextMenu, searchContextMenu, searchFileContextMenu } = DOMManager.elements;
         contextMenu.classList.remove('visible');
+        searchContextMenu.classList.remove('visible');
+        searchFileContextMenu.classList.remove('visible');
         contextMenu.style.left = '-9999px';
         contextMenu.style.top = '-9999px';
+        searchContextMenu.style.left = '-9999px';
+        searchContextMenu.style.top = '-9999px';
+        searchFileContextMenu.style.left = '-9999px';
+        searchFileContextMenu.style.top = '-9999px';
         StateManager.contextMenuTarget = null;
         this.removeForkButtonForSearchRepo();
-        document.removeEventListener('click', this.hide);
     },
+    
+    // 绑定主菜单静态事件（无内联HTML，纯事件绑定）
+    bindStaticMenuEvents() {
+        document.getElementById('context-open').addEventListener('click', () => this.handleMenuItemClick('open'));
+        document.getElementById('context-download').addEventListener('click', () => this.handleMenuItemClick('download'));
+        document.getElementById('context-rename').addEventListener('click', () => this.handleMenuItemClick('rename'));
+        document.getElementById('context-copy-link').addEventListener('click', () => this.handleMenuItemClick('copy-link'));
+        document.getElementById('context-copy-proxy-link').addEventListener('click', () => this.handleMenuItemClick('copy-proxy-link'));
+        document.getElementById('context-copy-repo-link').addEventListener('click', () => this.handleMenuItemClick('copy-repo-link'));
+        document.getElementById('context-copy-site-link').addEventListener('click', () => this.handleMenuItemClick('copy-site-link'));
+        document.getElementById('context-rename-repo').addEventListener('click', () => this.handleMenuItemClick('rename-repo'));
+        document.getElementById('context-delete').addEventListener('click', () => this.handleMenuItemClick('delete'));
+        document.getElementById('context-download-source').addEventListener('click', () => this.handleMenuItemClick('download-source'));
+        document.getElementById('context-enable-pages').addEventListener('click', () => this.handleMenuItemClick('enable-pages'));
+        document.getElementById('context-build-app').addEventListener('click', () => this.handleMenuItemClick('build-app'));
+    },
+    
+    // 绑定搜索结果菜单事件（保留原文逻辑）
+    bindSearchContextMenuEvents() {
+        const searchContextFork = document.getElementById('search-context-fork');
+        const searchContextCopyLink = document.getElementById('search-context-copy-link');
+        const searchContextVisit = document.getElementById('search-context-visit');
+        
+        searchContextFork?.addEventListener('click', () => this.handleSearchMenuItemClick('fork'));
+        searchContextCopyLink?.addEventListener('click', () => this.handleSearchMenuItemClick('copy-link'));
+        searchContextVisit?.addEventListener('click', () => this.handleSearchMenuItemClick('visit'));
+    },
+    
+    // 绑定搜索文件菜单事件（保留原文逻辑）
+    bindSearchFileContextMenuEvents() {
+        const searchFileOpen = document.getElementById('search-file-open');
+        const searchFileDownload = document.getElementById('search-file-download');
+        const searchFileCopyLink = document.getElementById('search-file-copy-link');
+        const searchFileCopyProxyLink = document.getElementById('search-file-copy-proxy-link');
+        
+        searchFileOpen?.addEventListener('click', () => this.handleSearchFileMenuItemClick('open'));
+        searchFileDownload?.addEventListener('click', () => this.handleSearchFileMenuItemClick('download'));
+        searchFileCopyLink?.addEventListener('click', () => this.handleSearchFileMenuItemClick('copy-link'));
+        searchFileCopyProxyLink?.addEventListener('click', () => this.handleSearchFileMenuItemClick('copy-proxy-link'));
+    },
+    
+    // 绑定全局点击隐藏（保留原文逻辑）
+    bindGlobalClickHide() {
+        document.addEventListener('click', (e) => {
+            const { contextMenu, searchContextMenu, searchFileContextMenu } = DOMManager.elements;
+            const isMenuClick = contextMenu.contains(e.target) ||
+                               searchContextMenu.contains(e.target) ||
+                               searchFileContextMenu.contains(e.target);
+            if (!isMenuClick) {
+                this.hide();
+            }
+        });
+    },
+    
+    // 添加搜索结果仓库「访问仓库」按钮（保留原文逻辑，无内联HTML字符串）
+    addVisitRepoButtonForSearchRepo(fileInfo) {
+        const visitBtn = document.getElementById('context-visit-repo');
+        if (visitBtn && visitBtn.parentNode) visitBtn.parentNode.removeChild(visitBtn);
+        
+        const newVisitBtn = document.createElement('div');
+        newVisitBtn.id = 'context-visit-repo';
+        newVisitBtn.className = 'context-menu-item';
+        newVisitBtn.innerHTML = '<i class="fas fa-external-link-alt text-blue-500"></i><span class="text-blue-500">访问仓库</span>';
+        newVisitBtn.addEventListener('click', () => {
+            window.open(`https://github.com/${fileInfo.path}`, '_blank');
+            this.hide();
+        });
+        
+        const copyRepoLink = document.getElementById('context-copy-repo-link');
+        copyRepoLink ? copyRepoLink.after(newVisitBtn) : DOMManager.elements.contextMenu.appendChild(newVisitBtn);
+    },
+    
+    // 添加搜索结果仓库「复刻仓库」按钮（保留原文逻辑，无内联HTML字符串）
+    addForkButtonForSearchRepo(fileInfo) {
+        this.removeForkButtonForSearchRepo();
+        
+        const newForkBtn = document.createElement('div');
+        newForkBtn.id = 'context-fork-repo';
+        newForkBtn.className = 'context-menu-item';
+        newForkBtn.innerHTML = '<i class="fas fa-code-branch text-blue-500"></i><span class="text-blue-500">复刻仓库</span>';
+        newForkBtn.addEventListener('click', () => {
+            this.forkRepository(fileInfo);
+            this.hide();
+        });
+        
+        const visitBtn = document.getElementById('context-visit-repo');
+        visitBtn ? visitBtn.after(newForkBtn) : DOMManager.elements.contextMenu.appendChild(newForkBtn);
+    },
+    
+    // 移除搜索结果仓库专属按钮（保留原文逻辑）
+    removeForkButtonForSearchRepo() {
+        const forkBtn = document.getElementById('context-fork-repo');
+        const visitBtn = document.getElementById('context-visit-repo');
+        if (forkBtn && forkBtn.parentNode) forkBtn.parentNode.removeChild(forkBtn);
+        if (visitBtn && visitBtn.parentNode) visitBtn.parentNode.removeChild(visitBtn);
+    },
+    
     // 处理菜单项点击
     handleMenuItemClick(action) {
         if (!StateManager.contextMenuTarget) return;
@@ -6101,7 +6250,7 @@ const ContextMenuManager = {
             case 'copy-link': this.copyFileLink(StateManager.contextMenuTarget, 'raw'); break;
             case 'copy-proxy-link': this.copyFileLink(StateManager.contextMenuTarget, 'cdn'); break;
             case 'copy-repo-link': this.copyRepoLink(StateManager.contextMenuTarget); break;
-            case 'copy-site-link': this.copySiteLink(StateManager.contextMenuTarget); break;
+            case 'copy-site-link': this.visitSiteLink(StateManager.contextMenuTarget); break;
             case 'rename-repo': this.renameRepository(StateManager.contextMenuTarget); break;
             case 'delete': this.deleteContextItem(StateManager.contextMenuTarget); break;
             case 'download-source': this.downloadRepositorySource(StateManager.contextMenuTarget); break;
@@ -6110,18 +6259,31 @@ const ContextMenuManager = {
         }
         this.hide();
     },
-    // 复制仓库链接
-    copyRepoLink(repoInfo) {
-        const repoUrl = `https://github.com/${repoInfo.path}`;
-        this.copyToClipboard(repoUrl, '仓库链接已复制');
+    
+    handleSearchMenuItemClick(action) {
+        if (!StateManager.contextMenuTarget) return;
+        const repoInfo = StateManager.contextMenuTarget;
+        switch (action) {
+            case 'fork': this.forkRepository(repoInfo); break;
+            case 'copy-link': this.copyRepoLink(repoInfo); break;
+            case 'visit': this.openContextItem(repoInfo); break;
+        }
+        this.hide();
+        this.hideSearchContextMenu();
     },
-    // 复制网站链接
-    copySiteLink(repoInfo) {
-        const [owner, repoName] = repoInfo.path.split('/');
-        const siteUrl = `https://${owner}.github.io/${repoName}`;
-        this.copyToClipboard(siteUrl, '网站链接已复制');
+    
+    handleSearchFileMenuItemClick(action) {
+        if (!StateManager.contextMenuTarget) return;
+        const fileInfo = StateManager.contextMenuTarget;
+        switch (action) {
+            case 'open': this.openSearchFile(fileInfo); break;
+            case 'download': this.downloadSearchFile(fileInfo); break;
+            case 'copy-link': this.copySearchFileLink(fileInfo, 'raw'); break;
+            case 'copy-proxy-link': this.copySearchFileLink(fileInfo, 'cdn'); break;
+        }
+        this.hideSearchFileContextMenu();
     },
-    // 打开菜单项目标
+    
     openContextItem(fileInfo) {
         if (fileInfo.type === 'dir') {
             NavigationManager.loadRepositoryContents(
@@ -6135,6 +6297,47 @@ const ContextMenuManager = {
             window.open(fileInfo.download_url, '_blank');
         }
     },
+    
+    copyRepoLink(repoInfo) {
+        const repoUrl = `https://github.com/${repoInfo.path}`;
+        this.copyToClipboard(repoUrl, '仓库链接已复制');
+    },
+    
+    visitSiteLink(repoInfo) {
+        const [owner, repoName] = repoInfo.path.split('/');
+        const siteUrl = `https://${owner}.github.io/${repoName}`;
+        window.open(siteUrl, '_blank');
+        ToastManager.show('已打开网站链接');
+    },
+    
+    copyFileLink(fileInfo, type) {
+        if (fileInfo.type !== 'file') return;
+        const rawUrl = fileInfo.download_url ||
+            fileInfo.html_url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+        let link, successMessage;
+        if (type === 'raw') { link = rawUrl; successMessage = 'Raw 链接已复制'; }
+        else { link = `https://gh-proxy.com/${rawUrl}`; successMessage = '代理链接已复制'; }
+        this.copyToClipboard(link, successMessage);
+    },
+    
+    copyToClipboard(text, successMessage) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = 0;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => ToastManager.show(successMessage));
+            else { document.execCommand('copy'); ToastManager.show(successMessage); }
+        } catch (err) {
+            console.error('复制失败:', err);
+            ToastManager.show('复制失败: ' + err.message);
+        } finally {
+            document.body.removeChild(textArea);
+        }
+    },
+    
     // 重命名文件
     async renameFile(fileInfo) {
         try {
@@ -6189,6 +6392,7 @@ const ContextMenuManager = {
             ToastManager.show('重命名文件失败: ' + error.message);
         }
     },
+    
     // 重命名仓库
     async renameRepository(repoInfo) {
         try {
@@ -6219,35 +6423,7 @@ const ContextMenuManager = {
             ToastManager.show('重命名失败: ' + error.message);
         }
     },
-    // 复制文件链接
-    copyFileLink(fileInfo, type) {
-        if (fileInfo.type !== 'file') return;
-        const rawUrl = fileInfo.download_url ||
-            fileInfo.html_url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
-        let link, successMessage;
-        if (type === 'raw') { link = rawUrl; successMessage = 'Raw 链接已复制'; }
-        else { link = `https://gh-proxy.com/${rawUrl}`; successMessage = '代理链接已复制'; }
-        this.copyToClipboard(link, successMessage);
-    },
-    // 复制到剪贴板
-    copyToClipboard(text, successMessage) {
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.opacity = 0;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => ToastManager.show(successMessage));
-            else { document.execCommand('copy'); ToastManager.show(successMessage); }
-        } catch (err) {
-            console.error('复制失败:', err);
-            ToastManager.show('复制失败: ' + err.message);
-        } finally {
-            document.body.removeChild(textArea);
-        }
-    },
-    // 删除菜单项
+    
     deleteContextItem(fileInfo) {
         if (fileInfo.type === 'repo') {
             DialogManager.showConfirmDialog(
@@ -6263,6 +6439,7 @@ const ContextMenuManager = {
             );
         }
     },
+    
     // 下载仓库源码
     async downloadRepositorySource(repoInfo) {
         try {
@@ -6282,6 +6459,7 @@ const ContextMenuManager = {
             ToastManager.removeProgressToast();
         }
     },
+    
     // 尝试直接下载仓库
     async tryDirectDownload(owner, repo, branch) {
         return new Promise((resolve) => {
@@ -6304,6 +6482,7 @@ const ContextMenuManager = {
             testLink.click();
         });
     },
+    
     // 通过API打包下载仓库
     async downloadViaAPI(owner, repo, branch, repoName) {
         const progressToast = ToastManager.createProgressToast('正在准备打包仓库内容...');
@@ -6352,6 +6531,7 @@ const ContextMenuManager = {
             ToastManager.removeProgressToast();
         }
     },
+    
     // 递归获取仓库所有文件
     async getAllFilesRecursive(owner, repo, branch, path) {
         try {
@@ -6372,9 +6552,10 @@ const ContextMenuManager = {
             return [];
         }
     },
+    
     // 切换GitHub Pages状态
     async toggleGitHubPages(fileInfo) {
-        const { contextEnablePages } = DOMManager.elements;
+        const contextEnablePages = document.getElementById('context-enable-pages');
         const originalHTML = contextEnablePages.innerHTML;
         contextEnablePages.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i><span>处理中...</span>';
         const targetRepo = this.getTargetRepo(fileInfo);
@@ -6403,6 +6584,7 @@ const ContextMenuManager = {
             contextEnablePages.innerHTML = originalHTML;
         }
     },
+    
     // 构建应用（触发工作流）
     async buildApp(repoInfo) {
         try {
@@ -6434,6 +6616,7 @@ const ContextMenuManager = {
             buildMessage.textContent = '构建失败: ' + error.message;
         }
     },
+    
     // 监控构建进度
     async monitorBuildProgress(owner, repo) {
         clearInterval(StateManager.buildTimer);
@@ -6496,36 +6679,7 @@ const ContextMenuManager = {
             }
         }, 10000);
     },
-    // 显示搜索结果上下文菜单
-    showSearchContextMenu(e, repoInfo) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.show(e, repoInfo, true);
-    },
-    // 隐藏搜索结果上下文菜单
-    hideSearchContextMenu() {
-        const mask = document.getElementById('search-context-menu-mask');
-        if (mask) mask.remove();
-        const menu = DOMManager.elements.searchContextMenu;
-        menu.classList.remove('visible');
-        menu.style.left = '-9999px';
-        menu.style.top = '-9999px';
-        StateManager.contextMenuTarget = null;
-        StateManager.isSearchContextMenu = false;
-    },
-    // 处理搜索结果菜单点击
-    handleSearchMenuItemClick(action) {
-        if (!StateManager.contextMenuTarget) return;
-        const repoInfo = StateManager.contextMenuTarget;
-        switch (action) {
-            case 'fork': this.forkRepository(repoInfo); break;
-            case 'copy-link': this.copyRepoLink(repoInfo); break;
-            case 'copy-site-link': this.copySiteLink(repoInfo); break;
-            case 'visit': this.openContextItem(repoInfo); break;
-        }
-        this.hide();
-        this.hideSearchContextMenu();
-    },
+    
     // 复刻仓库
     async forkRepository(repoInfo) {
         try {
@@ -6539,7 +6693,49 @@ const ContextMenuManager = {
             ToastManager.show('复刻失败: ' + error.message);
         }
     },
-    // 显示搜索结果文件上下文菜单
+    
+    openSearchFile(fileInfo) {
+        if (fileInfo.type === 'dir') {
+            NavigationManager.loadRepositoryContents(
+                StateManager.currentRepo,
+                `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${fileInfo.name}`
+            );
+        } else if (fileInfo.type === 'file') {
+            FileManager.handleFileOpen(fileInfo);
+        }
+    },
+    
+    downloadSearchFile(fileInfo) {
+        if (fileInfo.type === 'file' && fileInfo.download_url) {
+            FileManager.downloadFile(fileInfo);
+        }
+    },
+    
+    copySearchFileLink(fileInfo, type) {
+        if (fileInfo.type !== 'file') return;
+        let link, successMessage;
+        if (type === 'raw') { link = fileInfo.download_url; successMessage = 'Raw 链接已复制'; }
+        else { link = `https://gh-proxy.com/${fileInfo.download_url}`; successMessage = '代理链接已复制'; }
+        this.copyToClipboard(link, successMessage);
+    },
+    
+    showSearchContextMenu(e, repoInfo) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.show(e, repoInfo, true);
+    },
+    
+    hideSearchContextMenu() {
+        const mask = document.getElementById('search-context-menu-mask');
+        if (mask) mask.remove();
+        const menu = DOMManager.elements.searchContextMenu;
+        menu.classList.remove('visible');
+        menu.style.left = '-9999px';
+        menu.style.top = '-9999px';
+        StateManager.contextMenuTarget = null;
+        StateManager.isSearchContextMenu = false;
+    },
+    
     showSearchFileContextMenu(e, fileInfo) {
         e.preventDefault();
         e.stopPropagation();
@@ -6565,7 +6761,7 @@ const ContextMenuManager = {
         }
         mask.addEventListener('click', () => this.hideSearchFileContextMenu());
     },
-    // 定位搜索结果文件菜单
+    
     positionSearchFileMenu(e, menu) {
         const menuWidth = menu.offsetWidth;
         const menuHeight = menu.offsetHeight;
@@ -6578,7 +6774,7 @@ const ContextMenuManager = {
         menu.style.left = `${Math.max(10, posX)}px`;
         menu.style.top = `${Math.max(10, posY)}px`;
     },
-    // 隐藏搜索结果文件上下文菜单
+    
     hideSearchFileContextMenu() {
         const mask = document.getElementById('search-file-context-menu-mask');
         if (mask) mask.remove();
@@ -6588,101 +6784,36 @@ const ContextMenuManager = {
         menu.style.top = '-9999px';
         StateManager.contextMenuTarget = null;
     },
-    // 处理搜索结果文件菜单点击
-    handleSearchFileMenuItemClick(action) {
-        if (!StateManager.contextMenuTarget) return;
-        const fileInfo = StateManager.contextMenuTarget;
-        switch (action) {
-            case 'open': this.openSearchFile(fileInfo); break;
-            case 'download': this.downloadSearchFile(fileInfo); break;
-            case 'copy-link': this.copySearchFileLink(fileInfo, 'raw'); break;
-            case 'copy-proxy-link': this.copySearchFileLink(fileInfo, 'cdn'); break;
+    
+    setIsSearchResultPage(status) {
+        this.isSearchResultPage = status;
+    },
+    
+    getTargetRepo(fileInfo) {
+        return fileInfo.type === 'repo' ? fileInfo.path : StateManager.currentRepo;
+    },
+    
+    // 检查仓库Pages状态（备用方法，优先使用fileInfo.pagesEnabled）
+    async checkPagesStatus(repo) {
+        try {
+            const [owner, repoName] = repo.split('/');
+            const data = await APIService.getPagesStatus(owner, repoName);
+            const isEnabled = data.status === 'built' || data.status === 'building';
+            StateManager.pagesEnabledMap.set(repo, isEnabled);
+            return isEnabled;
+        } catch (error) {
+            console.error('检查Pages状态错误:', error);
+            StateManager.pagesEnabledMap.set(repo, false);
+            return false;
         }
-        this.hideSearchFileContextMenu();
-    },
-    // 打开搜索结果文件
-    openSearchFile(fileInfo) {
-        if (fileInfo.type === 'dir') {
-            NavigationManager.loadRepositoryContents(
-                StateManager.currentRepo,
-                `${StateManager.currentPath ? StateManager.currentPath + '/' : ''}${fileInfo.name}`
-            );
-        } else if (fileInfo.type === 'file') {
-            FileManager.handleFileOpen(fileInfo);
-        }
-    },
-    // 下载搜索结果文件
-    downloadSearchFile(fileInfo) {
-        if (fileInfo.type === 'file' && fileInfo.download_url) {
-            FileManager.downloadFile(fileInfo);
-        }
-    },
-    // 复制搜索结果文件链接
-    copySearchFileLink(fileInfo, type) {
-        if (fileInfo.type !== 'file') return;
-        let link, successMessage;
-        if (type === 'raw') { link = fileInfo.download_url; successMessage = 'Raw 链接已复制'; }
-        else { link = `https://gh-proxy.com/${fileInfo.download_url}`; successMessage = '代理链接已复制'; }
-        this.copyToClipboard(link, successMessage);
-    },
-    // 绑定搜索结果文件菜单事件
-    bindSearchFileContextMenuEvents() {
-        const { searchFileOpen, searchFileDownload, searchFileCopyLink, searchFileCopyProxyLink } = DOMManager.elements;
-        searchFileOpen?.addEventListener('click', () => this.handleSearchFileMenuItemClick('open'));
-        searchFileDownload?.addEventListener('click', () => this.handleSearchFileMenuItemClick('download'));
-        searchFileCopyLink?.addEventListener('click', () => this.handleSearchFileMenuItemClick('copy-link'));
-        searchFileCopyProxyLink?.addEventListener('click', () => this.handleSearchFileMenuItemClick('copy-proxy-link'));
-    },
-    // 全局点击处理（隐藏菜单）
-    handleGlobalClick(e) {
-        const { contextMenu, searchContextMenu, searchFileContextMenu } = DOMManager.elements;
-        const isMenuClick = contextMenu.contains(e.target) ||
-                           searchContextMenu.contains(e.target) ||
-                           searchFileContextMenu.contains(e.target);
-        if (!isMenuClick) {
-            this.hide();
-            this.hideSearchContextMenu();
-            this.hideSearchFileContextMenu();
-        }
-    },
-    // 绑定所有上下文菜单事件
-    bindContextMenuEvents() {
-        const {
-            contextOpen, contextDownload, contextRename,
-            contextCopyLink, contextCopyProxyLink, contextDelete,
-            contextEnablePages, contextBuildApp, contextDownloadSource,
-            contextCopyRepoLink, contextCopySiteLink,
-            contextRenameRepo
-        } = DOMManager.elements;
-        contextOpen?.addEventListener('click', () => this.handleMenuItemClick('open'));
-        contextDownload?.addEventListener('click', () => this.handleMenuItemClick('download'));
-        contextRename?.addEventListener('click', () => this.handleMenuItemClick('rename'));
-        contextCopyLink?.addEventListener('click', () => this.handleMenuItemClick('copy-link'));
-        contextCopyProxyLink?.addEventListener('click', () => this.handleMenuItemClick('copy-proxy-link'));
-        contextCopyRepoLink?.addEventListener('click', () => this.handleMenuItemClick('copy-repo-link'));
-        contextCopySiteLink?.addEventListener('click', () => this.handleMenuItemClick('copy-site-link'));
-        contextRenameRepo?.addEventListener('click', () => this.handleMenuItemClick('rename-repo'));
-        contextDelete?.addEventListener('click', () => this.handleMenuItemClick('delete'));
-        contextDownloadSource?.addEventListener('click', () => this.handleMenuItemClick('download-source'));
-        contextEnablePages?.addEventListener('click', () => this.handleMenuItemClick('enable-pages'));
-        contextBuildApp?.addEventListener('click', () => this.handleMenuItemClick('build-app'));
-        this.bindSearchFileContextMenuEvents();
-        document.removeEventListener('click', this.handleGlobalClick.bind(this));
-        document.addEventListener('click', this.handleGlobalClick.bind(this));
     }
 };
 
-// ==================== 补充：修改 NavigationManager 关联方法 ====================
-const originalLoadSearchResults = NavigationManager.loadSearchResults;
-NavigationManager.loadSearchResults = async function(query, page = 1, useCache = true) {
-    ContextMenuManager.setIsSearchResultPage(true);
-    return originalLoadSearchResults.call(this, query, page, useCache);
-};
-const originalLoadRepositories = NavigationManager.loadRepositories;
-NavigationManager.loadRepositories = async function(useCache = true) {
-    ContextMenuManager.setIsSearchResultPage(false);
-    return originalLoadRepositories.call(this, useCache);
-};
+// 初始化上下文菜单（页面加载时执行）
+document.addEventListener('DOMContentLoaded', () => {
+    ContextMenuManager.init();
+});
+
 
 // ==================== 认证管理模块 ====================
 const AuthManager = {
