@@ -4725,124 +4725,82 @@ const NavigationManager = {
         }
     },
     
-    // 加载搜索结果 - 修复版本
-    async loadSearchResults(query, page = 1, useCache = true) {
-        // 如果使用缓存且查询相同，直接使用缓存结果
-        if (useCache && StateManager.searchResultCache && 
-            StateManager.searchResultCache.query === query && 
-            StateManager.searchResultCache.currentPage === page) {
+   // 加载搜索结果
+async loadSearchResults(query, page = 1, useCache = true) {
+    // 如果使用缓存且查询相同，直接使用缓存结果
+    if (useCache && StateManager.searchResultCache && 
+        StateManager.searchResultCache.query === query && 
+        StateManager.searchResultCache.currentPage === page) {
+        
+        DOMManager.showFileList();
+        StateManager.setCurrentFiles(StateManager.searchResultCache.results);
+        FileManager.renderFileList(StateManager.searchResultCache.results);
+        // 移除统计信息显示
+        return;
+    }
+    
+    DOMManager.showLoading();
+    StateManager.setCurrentPath('');
+    StateManager.setCurrentRepo('');
+    StateManager.currentSearchQuery = query;
+    
+    this.updateBreadcrumb([`搜索结果: "${query}"`]);
+    DOMManager.updateButtonVisibility(true);
+    DOMManager.hide(DOMManager.elements.releasesSection);
+    
+    this.pushHistoryState('search', { 
+        query,
+        isSearchRepo: StateManager.currentRepo ? true : false
+    });
+    
+    try {
+        const searchResult = await APIService.searchRepositories(query, page);
+        
+        let formattedResults;
+        if (page === 1) {
+            // 第一页，创建新的结果集
+            formattedResults = searchResult.items.map(repo => ({
+                ...repo,
+                type: 'repo',
+                isSearchResult: true
+            }));
             
-            DOMManager.showFileList();
-            StateManager.setCurrentFiles(StateManager.searchResultCache.results);
-            FileManager.renderFileList(StateManager.searchResultCache.results);
-            this.showSearchStats(StateManager.searchResultCache.totalCount, 
-                               StateManager.searchResultCache.results.length);
-            return;
+            StateManager.searchResultCache = {
+                query,
+                results: formattedResults,
+                totalCount: searchResult.totalCount,
+                hasNextPage: searchResult.hasNextPage,
+                nextPage: searchResult.nextPage,
+                currentPage: page,
+                timestamp: Date.now()
+            };
+        } else {
+            // 后续页面，追加到现有结果
+            const newResults = searchResult.items.map(repo => ({
+                ...repo,
+                type: 'repo',
+                isSearchResult: true
+            }));
+            
+            formattedResults = [...StateManager.searchResultCache.results, ...newResults];
+            
+            StateManager.searchResultCache.results = formattedResults;
+            StateManager.searchResultCache.hasNextPage = searchResult.hasNextPage;
+            StateManager.searchResultCache.nextPage = searchResult.nextPage;
+            StateManager.searchResultCache.currentPage = page;
         }
         
-        DOMManager.showLoading();
-        StateManager.setCurrentPath('');
-        StateManager.setCurrentRepo('');
-        StateManager.currentSearchQuery = query;
+        StateManager.setCurrentFiles(formattedResults);
+        FileManager.renderFileList(formattedResults);
         
-        this.updateBreadcrumb([`搜索结果: "${query}"`]);
-        DOMManager.updateButtonVisibility(true);
-        DOMManager.hide(DOMManager.elements.releasesSection);
+        // 移除搜索统计信息显示
         
-        this.pushHistoryState('search', { 
-            query,
-            isSearchRepo: StateManager.currentRepo ? true : false
-        });
-        
-        try {
-            const searchResult = await APIService.searchRepositories(query, page);
-            
-            let formattedResults;
-            if (page === 1) {
-                // 第一页，创建新的结果集
-                formattedResults = searchResult.items.map(repo => ({
-                    ...repo,
-                    type: 'repo',
-                    isSearchResult: true
-                }));
-                
-                StateManager.searchResultCache = {
-                    query,
-                    results: formattedResults,
-                    totalCount: searchResult.totalCount,
-                    hasNextPage: searchResult.hasNextPage,
-                    nextPage: searchResult.nextPage,
-                    currentPage: page,
-                    timestamp: Date.now()
-                };
-            } else {
-                // 后续页面，追加到现有结果
-                const newResults = searchResult.items.map(repo => ({
-                    ...repo,
-                    type: 'repo',
-                    isSearchResult: true
-                }));
-                
-                formattedResults = [...StateManager.searchResultCache.results, ...newResults];
-                
-                StateManager.searchResultCache.results = formattedResults;
-                StateManager.searchResultCache.hasNextPage = searchResult.hasNextPage;
-                StateManager.searchResultCache.nextPage = searchResult.nextPage;
-                StateManager.searchResultCache.currentPage = page;
-            }
-            
-            StateManager.setCurrentFiles(formattedResults);
-            FileManager.renderFileList(formattedResults);
-            
-            // 显示搜索统计信息
-            this.showSearchStats(searchResult.totalCount, formattedResults.length);
-            
-        } catch (error) {
-            console.error('搜索失败:', error);
-            ToastManager.show('搜索失败: ' + error.message);
-            DOMManager.showEmptyState();
-        }
-    },
-
-    // 显示搜索统计信息
-    showSearchStats(totalCount, displayedCount) {
-        // 移除现有的统计信息
-        const existingStats = document.getElementById('search-stats');
-        if (existingStats) {
-            existingStats.remove();
-        }
-        
-        // 移除可能存在的加载更多按钮
-        const existingLoadMore = document.getElementById('load-more-results');
-        if (existingLoadMore) {
-            existingLoadMore.remove();
-        }
-        
-        if (totalCount > 0) {
-            const statsElement = document.createElement('div');
-            statsElement.id = 'search-stats';
-            statsElement.className = 'text-center text-sm text-gray-500 mt-4 p-3 glass rounded-lg';
-            
-            if (totalCount > displayedCount) {
-                statsElement.innerHTML = `
-                    <div>显示 <strong>${displayedCount}</strong> 个结果（共 <strong>${totalCount}</strong> 个）</div>
-                    <div class="text-xs mt-1 text-blue-500">GitHub API 限制最多显示100个结果，请使用更具体的关键词</div>
-                `;
-            } else {
-                statsElement.textContent = `共找到 ${totalCount} 个结果`;
-            }
-            
-            const fileList = DOMManager.elements.fileList;
-            if (fileList) {
-                fileList.appendChild(statsElement);
-            }
-            
-            // 如果结果很多，显示提示
-            if (totalCount > 100) {
-                ToastManager.show(`找到 ${totalCount} 个结果，显示前100个`);
-            }
-        }
-    },
+    } catch (error) {
+        console.error('搜索失败:', error);
+        ToastManager.show('搜索失败: ' + error.message);
+        DOMManager.showEmptyState();
+    }
+},
 
     // 更新面包屑导航
     updateBreadcrumb(parts) {
@@ -7061,7 +7019,7 @@ const App = {
         // 对话框遮罩层事件绑定
         this.bindDialogMaskEvents();
         
-        // 搜索按钮点击事件（唯一绑定）
+        // 搜索按钮点击事件
         searchRepoBtn?.addEventListener('click', () => {
             SearchManager.openSearchOverlay();
         });
@@ -7072,7 +7030,7 @@ const App = {
         
         
         
-        // 刷新版本列表（单一绑定，移除重复绑定）
+        // 刷新版本列表
         refreshReleasesBtn?.addEventListener('click', () => {
             if (StateManager.currentRepo) {
                 const [owner, repoName] = StateManager.currentRepo.split('/');
