@@ -7066,33 +7066,11 @@ const App = {
             SearchManager.openSearchOverlay();
         });
         
-        // 搜索结果上下文菜单事件
-        searchContextFork?.addEventListener('click', () => {
-            ContextMenuManager.handleSearchMenuItemClick('fork');
-        });
-        searchContextCopyLink?.addEventListener('click', () => {
-            ContextMenuManager.handleSearchMenuItemClick('copy-link');
-        });
-        searchContextVisit?.addEventListener('click', () => {
-            ContextMenuManager.handleSearchMenuItemClick('visit');
-        });
         
         // 绑定搜索上下文菜单事件
         ContextMenuManager.bindSearchContextMenuEvents();
         
-        // 搜索文件上下文菜单事件
-        searchFileOpen?.addEventListener('click', () => {
-            ContextMenuManager.handleSearchFileMenuItemClick('open');
-        });
-        searchFileDownload?.addEventListener('click', () => {
-            ContextMenuManager.handleSearchFileMenuItemClick('download');
-        });
-        searchFileCopyLink?.addEventListener('click', () => {
-            ContextMenuManager.handleSearchFileMenuItemClick('copy-link');
-        });
-        searchFileCopyProxyLink?.addEventListener('click', () => {
-            ContextMenuManager.handleSearchFileMenuItemClick('copy-proxy-link');
-        });
+        
         
         // 刷新版本列表（单一绑定，移除重复绑定）
         refreshReleasesBtn?.addEventListener('click', () => {
