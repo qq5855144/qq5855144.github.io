@@ -2310,13 +2310,14 @@ const StateManager = {
     monacoLoadPromise: null,
     
     // 搜索排序相关新增状态
-    currentSearchSort: 'updated', // 默认排序：按更新时间
-    sortIconMap: { // 排序图标映射
-        'updated': 'fa-clock',
-        'stars': 'fa-fire', // 热度→火焰图标
-        'forks': 'fa-code-branch',
-        'score': 'fa-search'
-    },
+currentSearchSort: 'score', 
+sortIconMap: { 
+    'updated': 'fa-clock',
+    'stars': 'fa-fire', 
+    'forks': 'fa-code-branch',
+    'score': 'fa-search' 
+},
+
     
     // 状态操作方法
     resetSelection() {
@@ -3383,19 +3384,22 @@ async getRepositoryContents(repo, path = '') {
         }
     },
     
-    // 搜索GitHub仓库（支持分页）
+   // 搜索GitHub仓库（支持分页）
 async searchRepositories(query, page = 1) {
     const sortMap = {
         'updated': 'updated',
         'stars': 'stars',
         'forks': 'forks',
-        'score': 'score'
+        'score': 'score' // 匹配度对应score参数
     };
-    const sort = sortMap[StateManager.getSearchSort()] || 'updated';
-    const order = sort === 'score' ? 'desc' : 'desc';
+    const sort = sortMap[StateManager.getSearchSort()] || 'score'; // 默认按匹配度
+    const order = 'desc'; // 统一降序排列
+    
+    // 构造搜索参数，包含is:public确保公开仓库搜索
+    const searchQuery = `${encodeURIComponent(query)}+is%3Apublic`;
     
     const response = await this.request(
-        `${this.baseURL}/search/repositories?q=${encodeURIComponent(query)}&per_page=100&page=${page}&sort=${sort}&order=${order}`,
+        `${this.baseURL}/search/repositories?q=${searchQuery}&per_page=100&page=${page}&sort=${sort}&order=${order}`,
         { method: 'GET' }
     );
     const data = await response.json();
@@ -3464,8 +3468,8 @@ async searchRepositories(query, page = 1) {
         nextPage: nextPage,
         currentPage: page
     };
-},
-    
+},    
+
     // 获取仓库发布版本
     async getRepositoryReleases(owner, repo) {
         const response = await this.request(
@@ -3480,6 +3484,8 @@ async searchRepositories(query, page = 1) {
 // ==================== 搜索管理模块 ====================
 const SearchManager = {
     currentSearchType: 'repositories',
+    isLoadingNextPage: false,
+    hasMorePages: true,
     
     // 初始化搜索功能
     init() {
@@ -3487,6 +3493,7 @@ const SearchManager = {
         this.loadSearchHistory();
         this.bindSearchTypeEvents();
         this.bindSortEvents();
+        this.bindInfiniteScroll(); // 绑定滚动加载事件
     },
     
     // 绑定搜索相关事件
@@ -3512,7 +3519,7 @@ const SearchManager = {
             } else if (e.key === 'Enter') {
                 const query = e.target.value.trim();
                 if (query) {
-                    this.doSearch(query);
+                    this.doSearch(query, 1, true); // 重置搜索，从第一页开始
                 }
             }
         });
@@ -3556,10 +3563,10 @@ const SearchManager = {
                 const sortType = item.dataset.sort;
                 StateManager.setSearchSort(sortType);
                 sortMenu.classList.remove('visible');
-                // 已有关键词则重新搜索
+                // 已有关键词则重新搜索（重置为第一页）
                 const query = document.getElementById('search-overlay-input').value.trim();
                 if (query && this.currentSearchType === 'repositories') {
-                    this.doSearch(query);
+                    this.doSearch(query, 1, true);
                 }
             });
         });
@@ -3567,6 +3574,24 @@ const SearchManager = {
         // 点击其他地方关闭排序菜单
         document.addEventListener('click', () => {
             sortMenu.classList.remove('visible');
+        });
+    },
+    
+    // 绑定滚动加载事件
+    bindInfiniteScroll() {
+        window.addEventListener('scroll', async () => {
+            // 仅在仓库搜索、有搜索关键词、不在加载中、有更多页面时触发
+            const query = StateManager.currentSearchQuery;
+            if (this.currentSearchType !== 'repositories' || !query || this.isLoadingNextPage || !this.hasMorePages) {
+                return;
+            }
+            
+            // 滚动到页面底部200px时加载下一页
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+                const currentPage = StateManager.searchResultCache?.currentPage || 1;
+                const nextPage = currentPage + 1;
+                await this.loadNextPage(query, nextPage);
+            }
         });
     },
     
@@ -3588,10 +3613,14 @@ const SearchManager = {
             sortBtn.style.display = type === 'repositories' ? 'flex' : 'none';
         }
         
+        // 重置滚动加载状态
+        this.isLoadingNextPage = false;
+        this.hasMorePages = true;
+        
         // 如果当前有搜索词，重新搜索
         const searchInput = document.getElementById('search-overlay-input');
         if (searchInput.value.trim()) {
-            this.doSearch(searchInput.value.trim());
+            this.doSearch(searchInput.value.trim(), 1, true);
         }
     },
     
@@ -3625,7 +3654,7 @@ const SearchManager = {
     
     // 打开搜索遮罩层
     openSearchOverlay() {
-        const { searchOverlay, searchOverlayInput } = DOMManager.elements;
+        const { searchOverlay, searchOverlayClose, searchOverlayInput } = DOMManager.elements;
         if (!searchOverlay || !searchOverlayInput) return;
         
         searchOverlay.classList.remove('hidden');
@@ -3646,30 +3675,108 @@ const SearchManager = {
         searchOverlay.classList.add('hidden');
         if (searchOverlayInput) searchOverlayInput.value = '';
         if (searchHistory) searchHistory.classList.add('hidden');
+        
+        // 重置滚动加载状态
+        this.isLoadingNextPage = false;
+        this.hasMorePages = true;
     },
     
     // 执行搜索
-    async doSearch(query) {
+    async doSearch(query, page = 1, resetResults = false) {
         this.saveSearchHistory(query);
         this.closeSearchOverlay();
         
-        // 根据搜索类型调用不同的API
-        switch (this.currentSearchType) {
-            case 'repositories':
-                await NavigationManager.loadSearchResults(query);
-                break;
-            case 'code':
-                await this.searchCode(query);
-                break;
-            case 'issues':
-                await this.searchIssues(query);
-                break;
-            case 'users':
-                await this.searchUsers(query);
-                break;
-            default:
-                await NavigationManager.loadSearchResults(query);
+        // 重置状态（首次搜索或排序变更时）
+        if (resetResults) {
+            this.isLoadingNextPage = false;
+            this.hasMorePages = true;
+            DOMManager.showLoading();
+        } else {
+            this.isLoadingNextPage = true;
+            // 显示加载提示（底部临时提示）
+            const loadingToast = document.createElement('div');
+            loadingToast.className = 'fixed bottom-20 left-1/2 transform -translate-x-1/2 glass-panel px-4 py-2 rounded-full text-sm';
+            loadingToast.textContent = '加载下一页...';
+            document.body.appendChild(loadingToast);
         }
+        
+        try {
+            const searchResult = await APIService.searchRepositories(query, page);
+            
+            let formattedResults;
+            if (resetResults || !StateManager.searchResultCache) {
+                // 第一页或重置搜索，创建新的结果集
+                formattedResults = searchResult.items.map(repo => ({
+                    ...repo,
+                    type: 'repo',
+                    isSearchResult: true
+                }));
+                
+                StateManager.searchResultCache = {
+                    query,
+                    results: formattedResults,
+                    totalCount: searchResult.totalCount,
+                    hasNextPage: searchResult.hasNextPage,
+                    nextPage: searchResult.nextPage,
+                    currentPage: page,
+                    timestamp: Date.now()
+                };
+            } else {
+                // 后续页面，追加到现有结果
+                const newResults = searchResult.items.map(repo => ({
+                    ...repo,
+                    type: 'repo',
+                    isSearchResult: true
+                }));
+                
+                formattedResults = [...StateManager.searchResultCache.results, ...newResults];
+                
+                StateManager.searchResultCache.results = formattedResults;
+                StateManager.searchResultCache.hasNextPage = searchResult.hasNextPage;
+                StateManager.searchResultCache.nextPage = searchResult.nextPage;
+                StateManager.searchResultCache.currentPage = page;
+            }
+            
+            // 更新滚动加载状态
+            this.hasMorePages = searchResult.hasNextPage;
+            this.isLoadingNextPage = false;
+            
+            StateManager.setCurrentFiles(formattedResults);
+            StateManager.currentSearchQuery = query;
+            
+            // 首次搜索时更新面包屑和按钮状态
+            if (resetResults) {
+                NavigationManager.updateBreadcrumb([`搜索结果: "${query}"`]);
+                DOMManager.updateButtonVisibility(true);
+                DOMManager.hide(DOMManager.elements.releasesSection);
+                NavigationManager.pushHistoryState('search', { 
+                    query,
+                    isSearchRepo: StateManager.currentRepo ? true : false
+                });
+            }
+            
+            FileManager.renderFileList(formattedResults);
+            
+        } catch (error) {
+            console.error('搜索失败:', error);
+            ToastManager.show('搜索失败: ' + error.message);
+            DOMManager.showEmptyState();
+            this.isLoadingNextPage = false;
+            this.hasMorePages = false;
+        } finally {
+            // 移除加载提示
+            const loadingToast = document.querySelector('.fixed.bottom-20.text-sm');
+            if (loadingToast) {
+                document.body.removeChild(loadingToast);
+            }
+        }
+    },
+    
+    // 加载下一页结果
+    async loadNextPage(query, nextPage) {
+        if (this.isLoadingNextPage || !this.hasMorePages) return;
+        
+        await this.doSearch(query, nextPage, false);
     },
     
     // 搜索代码
@@ -3864,7 +3971,7 @@ const SearchManager = {
             textEl.addEventListener('click', () => {
                 if (searchOverlayInput) {
                     searchOverlayInput.value = item;
-                    this.doSearch(item);
+                    this.doSearch(item, 1, true);
                 }
             });
             
@@ -3882,6 +3989,7 @@ const SearchManager = {
         });
     }
 };
+
 
 // ==================== 文件管理模块 ====================
 const FileManager = {
@@ -5046,47 +5154,8 @@ async loadSearchResults(query, page = 1, useCache = true) {
     });
     
     try {
-        const searchResult = await APIService.searchRepositories(query, page);
-        
-        let formattedResults;
-        if (page === 1) {
-            // 第一页，创建新的结果集
-            formattedResults = searchResult.items.map(repo => ({
-                ...repo,
-                type: 'repo',
-                isSearchResult: true
-            }));
-            
-            StateManager.searchResultCache = {
-                query,
-                results: formattedResults,
-                totalCount: searchResult.totalCount,
-                hasNextPage: searchResult.hasNextPage,
-                nextPage: searchResult.nextPage,
-                currentPage: page,
-                timestamp: Date.now()
-            };
-        } else {
-            // 后续页面，追加到现有结果
-            const newResults = searchResult.items.map(repo => ({
-                ...repo,
-                type: 'repo',
-                isSearchResult: true
-            }));
-            
-            formattedResults = [...StateManager.searchResultCache.results, ...newResults];
-            
-            StateManager.searchResultCache.results = formattedResults;
-            StateManager.searchResultCache.hasNextPage = searchResult.hasNextPage;
-            StateManager.searchResultCache.nextPage = searchResult.nextPage;
-            StateManager.searchResultCache.currentPage = page;
-        }
-        
-        StateManager.setCurrentFiles(formattedResults);
-        FileManager.renderFileList(formattedResults);
-        
-        // 移除搜索统计信息显示
-        
+        // 直接调用SearchManager的搜索方法，确保状态统一
+        await SearchManager.doSearch(query, page, !useCache);
     } catch (error) {
         console.error('搜索失败:', error);
         ToastManager.show('搜索失败: ' + error.message);
