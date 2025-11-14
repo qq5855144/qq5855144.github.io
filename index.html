@@ -445,27 +445,40 @@ body {
 
 /* 移动设备工具栏 */
 .mobile-editor-toolbar {
-    display: none;
-    background: #f8f9fa;
-    border-top: 1px solid #e9ecef;
-    padding: 8px;
-    gap: 8px;
-    flex-wrap: wrap;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0;
+    padding: 4px 0; 
+    height: auto; 
 }
 
 .mobile-toolbar-btn {
     flex: 1;
-    min-width: 60px;
-    padding: 8px;
-    border: 1px solid #dee2e6;
+    min-width: unset;
+    max-width: none;
+    padding: 6px 0;
+    border: none;
     border-radius: 6px;
-    background: white;
+    background: transparent;
     cursor: pointer;
-    font-size: 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 2px;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+}
+
+.mobile-toolbar-btn i {
+    font-size: 16px; 
+    color: var(--text-primary);
+}
+
+.mobile-toolbar-btn span {
+    display: none;
 }
 
 .editor-status-bar {
